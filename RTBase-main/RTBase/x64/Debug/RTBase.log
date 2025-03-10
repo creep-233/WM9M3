@@ -1,0 +1,44 @@
+﻿  Main.cpp
+D:\学习办公\华威\WM9M3\RTBase-main\RTBase\Materials.h(96,70): warning C4305: “参数”: 从“double”到“const float”截断
+  (编译源文件“Main.cpp”)
+  
+D:\学习办公\华威\WM9M3\RTBase-main\RTBase\Materials.h(103,59): warning C4305: “参数”: 从“double”到“const float”截断
+  (编译源文件“Main.cpp”)
+  
+D:\学习办公\华威\WM9M3\RTBase-main\RTBase\Materials.h(138,70): warning C4305: “参数”: 从“double”到“const float”截断
+  (编译源文件“Main.cpp”)
+  
+D:\学习办公\华威\WM9M3\RTBase-main\RTBase\Materials.h(145,59): warning C4305: “参数”: 从“double”到“const float”截断
+  (编译源文件“Main.cpp”)
+  
+D:\学习办公\华威\WM9M3\RTBase-main\RTBase\Materials.h(187,70): warning C4305: “参数”: 从“double”到“const float”截断
+  (编译源文件“Main.cpp”)
+  
+D:\学习办公\华威\WM9M3\RTBase-main\RTBase\Materials.h(194,59): warning C4305: “参数”: 从“double”到“const float”截断
+  (编译源文件“Main.cpp”)
+  
+D:\学习办公\华威\WM9M3\RTBase-main\RTBase\Materials.h(233,70): warning C4305: “参数”: 从“double”到“const float”截断
+  (编译源文件“Main.cpp”)
+  
+D:\学习办公\华威\WM9M3\RTBase-main\RTBase\Materials.h(240,59): warning C4305: “参数”: 从“double”到“const float”截断
+  (编译源文件“Main.cpp”)
+  
+D:\学习办公\华威\WM9M3\RTBase-main\RTBase\Materials.h(281,70): warning C4305: “参数”: 从“double”到“const float”截断
+  (编译源文件“Main.cpp”)
+  
+D:\学习办公\华威\WM9M3\RTBase-main\RTBase\Materials.h(288,59): warning C4305: “参数”: 从“double”到“const float”截断
+  (编译源文件“Main.cpp”)
+  
+D:\学习办公\华威\WM9M3\RTBase-main\RTBase\Materials.h(325,70): warning C4305: “参数”: 从“double”到“const float”截断
+  (编译源文件“Main.cpp”)
+  
+D:\学习办公\华威\WM9M3\RTBase-main\RTBase\Materials.h(332,59): warning C4305: “参数”: 从“double”到“const float”截断
+  (编译源文件“Main.cpp”)
+  
+D:\学习办公\华威\WM9M3\RTBase-main\RTBase\Materials.h(377,70): warning C4305: “参数”: 从“double”到“const float”截断
+  (编译源文件“Main.cpp”)
+  
+D:\学习办公\华威\WM9M3\RTBase-main\RTBase\Materials.h(384,59): warning C4305: “参数”: 从“double”到“const float”截断
+  (编译源文件“Main.cpp”)
+  
+  RTBase.vcxproj -> D:\学习办公\华威\WM9M3\RTBase-main\x64\Debug\RTBase.exe
