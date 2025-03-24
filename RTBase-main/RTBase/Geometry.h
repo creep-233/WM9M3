@@ -131,11 +131,29 @@ public:
 		interpolatedU = vertices[0].u * alpha + vertices[1].u * beta + vertices[2].u * gamma;
 		interpolatedV = vertices[0].v * alpha + vertices[1].v * beta + vertices[2].v * gamma;
 	}
+
 	// Add code here
+	//Vec3 sample(Sampler* sampler, float& pdf)
+	//{
+	//	float r1 = sample->next();
+	//	//return Vec3(0, 0, 0);
+	//}
+
 	Vec3 sample(Sampler* sampler, float& pdf)
 	{
-		return Vec3(0, 0, 0);
+		float r1 = sampler->next();
+		float r2 = sampler->next();
+
+		float sqrtR1 = sqrt(r1);
+		float b0 = 1.0f - sqrtR1;
+		float b1 = r2 * sqrtR1;
+		float b2 = 1.0f - b0 - b1;
+
+		pdf = 1.0f / area;
+
+		return vertices[0].p * b0 + vertices[1].p * b1 + vertices[2].p * b2;
 	}
+
 	Vec3 gNormal()
 	{
 		return (n * (Dot(vertices[0].normal, n) > 0 ? 1.0f : -1.0f));

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Core.h"
 #define STB_IMAGE_IMPLEMENTATION
@@ -140,7 +140,7 @@ class BoxFilter : public ImageFilter
 public:
 	float filter(float x, float y) const
 	{
-		if (fabsf(x) < 0.5f && fabs(y) < 0.5f)
+		if (fabsf(x) <= 0.5f && fabs(y) <= 0.5f)
 		{
 			return 1.0f;
 		}
@@ -152,6 +152,29 @@ public:
 	}
 };
 
+//Gaussian Filter
+class GaussianFilter : public ImageFilter {
+public:
+	float filter(float x, float y) const override {
+		const float alpha = 1.0f;  // 固定的衰减因子
+		const float radius = 2.0f; // 固定的影响半径
+
+		float d2 = x * x + y * y;  // 计算 d²
+		return exp(-alpha * d2) - exp(-alpha * radius * radius);
+	}
+
+	int size() const override {
+		return 1;  // 设定影响半径为 1
+	}
+
+};
+
+
+
+//Mitchell - Netravali Filter
+
+
+
 class Film
 {
 public:
@@ -160,17 +183,42 @@ public:
 	unsigned int height;
 	int SPP;
 	ImageFilter* filter;
+
 	void splat(const float x, const float y, const Colour& L)
 	{
 		// Code to splat a smaple with colour L into the image plane using an ImageFilter
+
+		//只给box用了，记得改
+		float filterWeights[25]; // Storage to cache weights 
+		unsigned int indices[25]; // Store indices to minimize computations 
+		unsigned int used = 0;
+		float total = 0;
+		int size = filter->size();
+		for (int i = -size; i <= size; i++) {
+			for (int j = -size; j <= size; j++) {
+				int px = (int)x + j;
+				int py = (int)y + i;
+				if (px >= 0 && px < width && py >= 0 && py < height) {
+					indices[used] = (py * width) + px;
+					filterWeights[used] = filter->filter(j, i);
+					total += filterWeights[used];
+					used++;
+				}
+			}
+		}
+		for (int i = 0; i < used; i++) {
+			film[indices[i]] = film[indices[i]] + (L * filterWeights[i] / total);
+		}
 	}
 	void tonemap(int x, int y, unsigned char& r, unsigned char& g, unsigned char& b, float exposure = 1.0f)
 	{
 		Colour pixel = film[(y * width) + x] * exposure / (float)SPP;
 		r = std::min(powf(std::max(pixel.r, 0.0f), 1.0f / 2.2f) * 255, 255.0f);
-		g = std::min(powf(std::max(pixel.r, 0.0f), 1.0f / 2.2f) * 255, 255.0f);
-		b = std::min(powf(std::max(pixel.r, 0.0f), 1.0f / 2.2f) * 255, 255.0f);
+		g = std::min(powf(std::max(pixel.g, 0.0f), 1.0f / 2.2f) * 255, 255.0f);
+		b = std::min(powf(std::max(pixel.b, 0.0f), 1.0f / 2.2f) * 255, 255.0f);
 	}
+
+
 	// Do not change any code below this line
 	void init(int _width, int _height, ImageFilter* _filter)
 	{
