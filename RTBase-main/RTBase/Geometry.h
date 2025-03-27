@@ -102,27 +102,6 @@ public:
 		if (v < 0 || (u + v) > 1.0f) { return false; }
 		return true;
 
-
-		//const float EPSILON = 1e-6f; // 避免浮点误差
-
-		//float denom = Dot(n, r.dir);
-		//if (fabs(denom) < EPSILON) return false; // 避免浮点数精度问题
-
-		//t = (d - Dot(n, r.o)) / denom;
-		//if (t < 0) return false; // 交点在射线背后，无交点
-
-		//Vec3 p = r.at(t); // 计算交点坐标
-
-		//Vec3 c1 = e1.cross(p - vertices[1].p);
-		//Vec3 c2 = e2.cross(p - vertices[2].p);
-
-		//float invArea = 1.0f / Dot(e1.cross(e2), n); // 预计算逆面积
-		//u = Dot(c1, n) * invArea;
-		//v = Dot(c2, n) * invArea;
-
-
-		//return !(u < 0 || u > 1.0f || v < 0 || (u + v) > 1.0f); // 检查重心坐标是否合法
-
 	}
 	void interpolateAttributes(const float alpha, const float beta, const float gamma, Vec3& interpolatedNormal, float& interpolatedU, float& interpolatedV) const
 	{
@@ -160,64 +139,6 @@ public:
 	}
 };
 
-//class AABB
-//{
-//public:
-//	Vec3 max;
-//	Vec3 min;
-//	AABB()
-//	{
-//		reset();
-//	}
-//	void reset()
-//	{
-//		max = Vec3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-//		min = Vec3(FLT_MAX, FLT_MAX, FLT_MAX);
-//	}
-//	void extend(const Vec3 p)
-//	{
-//		max = Max(max, p);
-//		min = Min(min, p);
-//	}
-//	// Add code here
-//	bool rayAABB(const Ray& r, float& t)
-//	{
-//		return true;
-//	}
-//	// Add code here
-//	bool rayAABB(const Ray& r)
-//	{
-//		return true;
-//	}
-//	// Add code here
-//	float area()
-//	{
-//		Vec3 size = max - min;
-//		return ((size.x * size.y) + (size.y * size.z) + (size.x * size.z)) * 2.0f;
-//	}
-//	bool rayIntersect(const Ray& ray, float& tMin, float& tMax) const {
-//		tMin = 0.0f;
-//		tMax = FLT_MAX;
-//
-//		for (int i = 0; i < 3; ++i) {
-//			float invD = 1.0f / ray.dir[i];
-//			float t0 = (min[i] - ray.origin[i]) * invD;
-//			float t1 = (max[i] - ray.origin[i]) * invD;
-//
-//			if (invD < 0.0f)
-//				std::swap(t0, t1);
-//
-//			tMin = std::max(tMin, t0);
-//			tMax = std::min(tMax, t1);
-//
-//			if (tMax < tMin)
-//				return false;
-//		}
-//		return true;
-//	}
-//
-//};
-
 
 class AABB
 {
@@ -238,17 +159,8 @@ public:
 		max = Max(max, p);
 		min = Min(min, p);
 	}
-	//// Add code here
-	//bool rayAABB(const Ray& r, float& t)
-	//{
-	//	return true;
-	//}
-	//// Add code here
-	//bool rayAABB(const Ray& r)
-	//{
-	//	return true;
-	//}
-	// 
+
+
 	bool rayAABB(const Ray& r, float& t) {
 		float tMin, tMax;
 		bool hit = rayIntersect(r, tMin, tMax);
@@ -285,37 +197,26 @@ public:
 		return true;
 	}
 
+	bool rayAABB(const Ray& r, float& tMin, float& tMax)
+	{
+		return rayIntersect(r, tMin, tMax);
+	}
+
+
+	void extend(const AABB& box)
+	{
+		extend(box.min);
+		extend(box.max);
+	}
+
+
+
 	float area()
 	{
 		Vec3 size = max - min;
 		return ((size.x * size.y) + (size.y * size.z) + (size.x * size.z)) * 2.0f;
 	}
 
-	//float area()
-	//{
-	//	Vec3 size = max - min;
-	//	return ((size.x * size.y) + (size.y * size.z) + (size.x * size.z)) * 2.0f;
-	//}
-	//	bool rayIntersect(const Ray& ray, float& tMin, float& tMax) const {
-	//	tMin = 0.0f;
-	//	tMax = FLT_MAX;
-
-	//	for (int i = 0; i < 3; ++i) {
-	//		float invD = 1.0f / ray.dir[i];
-	//		float t0 = (min[i] - ray.origin[i]) * invD;
-	//		float t1 = (max[i] - ray.origin[i]) * invD;
-
-	//		if (invD < 0.0f)
-	//			std::swap(t0, t1);
-
-	//		tMin = std::max(tMin, t0);
-	//		tMax = std::min(tMax, t1);
-
-	//		if (tMax < tMin)
-	//			return false;
-	//	}
-	//	return true;
-	//}
 };
 
 class Sphere
@@ -349,30 +250,265 @@ struct IntersectionData
 #define TRIANGLE_COST 2.0f
 #define BUILD_BINS 32
 
+//class BVHNode
+//{
+//public:
+//	AABB bounds;
+//	BVHNode* r;
+//	BVHNode* l;
+//
+//	std::vector<int> triangleIndices; // 用于记录该节点包含的三角形索引
+//
+//	// This can store an offset and number of triangles in a global triangle list for example
+//	// But you can store this however you want!
+//	// unsigned int offset;
+//	// unsigned char num;
+//	BVHNode()
+//	{
+//		r = NULL;
+//		l = NULL;
+//	}
+//	// Note there are several options for how to implement the build method. Update this as required
+//	void build(std::vector<Triangle>& inputTriangles)
+//	{
+//		// 创建初始索引数组
+//		triangleIndices.clear();
+//		for (int i = 0; i < inputTriangles.size(); i++)
+//			triangleIndices.push_back(i);
+//
+//		buildRecursive(inputTriangles, triangleIndices, 0);
+//	}
+//	void buildRecursive(std::vector<Triangle>& triangles, std::vector<int>& triIndices, int depth)
+//	{
+//		bounds.reset();
+//		for (int i : triIndices)
+//		{
+//			for (int v = 0; v < 3; v++)
+//				bounds.extend(triangles[i].vertices[v].p);
+//		}
+//
+//		// 叶子节点
+//		if (triIndices.size() <= 4 || depth >= 16)
+//		{
+//			triangleIndices = triIndices;
+//			return;
+//		}
+//
+//		// 选择最长轴
+//		AABB centroidBounds;
+//		for (int i : triIndices)
+//			centroidBounds.extend(triangles[i].centre());
+//
+//		Vec3 extent = centroidBounds.max - centroidBounds.min;
+//		int axis = (extent.x > extent.y) ? ((extent.x > extent.z) ? 0 : 2) : ((extent.y > extent.z) ? 1 : 2);
+//
+//		std::sort(triIndices.begin(), triIndices.end(), [&](int a, int b) {
+//			return triangles[a].centre()[axis] < triangles[b].centre()[axis];
+//			});
+//
+//		int mid = triIndices.size() / 2;
+//		std::vector<int> leftIndices(triIndices.begin(), triIndices.begin() + mid);
+//		std::vector<int> rightIndices(triIndices.begin() + mid, triIndices.end());
+//
+//		l = new BVHNode();
+//		l->buildRecursive(triangles, leftIndices, depth + 1);
+//		r = new BVHNode();
+//		r->buildRecursive(triangles, rightIndices, depth + 1);
+//	}
+//	void traverse(const Ray& ray, const std::vector<Triangle>& triangles, IntersectionData& intersection)
+//	{
+//		float tMin, tMax;
+//		if (!bounds.rayIntersect(ray, tMin, tMax)) return;
+//
+//		if (l == nullptr && r == nullptr)
+//		{
+//			for (int i : triangleIndices)
+//			{
+//				float t, u, v;
+//				if (triangles[i].rayIntersect(ray, t, u, v) && t < intersection.t)
+//				{
+//					intersection.t = t;
+//					intersection.ID = i;
+//					intersection.alpha = u;
+//					intersection.beta = v;
+//					intersection.gamma = 1.0f - u - v;
+//				}
+//			}
+//			return;
+//		}
+//
+//		if (l) l->traverse(ray, triangles, intersection);
+//		if (r) r->traverse(ray, triangles, intersection);
+//	}
+//	IntersectionData traverse(const Ray& ray, const std::vector<Triangle>& triangles)
+//	{
+//		IntersectionData intersection;
+//		intersection.t = FLT_MAX;
+//		traverse(ray, triangles, intersection);
+//		return intersection;
+//	}
+//	bool traverseVisible(const Ray& ray, const std::vector<Triangle>& triangles, const float maxT)
+//	{
+//		float tMin, tMax;
+//
+//		if (!bounds.rayIntersect(ray, tMin, tMax) || tMin > maxT) return false;
+//
+//		if (l == nullptr && r == nullptr)
+//		{
+//			for (int i : triangleIndices)
+//			{
+//				float t, u, v;
+//				if (triangles[i].rayIntersect(ray, t, u, v) && t < maxT)
+//					return true;
+//			}
+//			return false;
+//		}
+//
+//		if (l && l->traverseVisible(ray, triangles, maxT)) return true;
+//		if (r && r->traverseVisible(ray, triangles, maxT)) return true;
+//
+//		return false; 
+//	}
+//};
+
+
 class BVHNode
 {
 public:
 	AABB bounds;
-	BVHNode* r;
 	BVHNode* l;
-	// This can store an offset and number of triangles in a global triangle list for example
-	// But you can store this however you want!
-	// unsigned int offset;
-	// unsigned char num;
+	BVHNode* r;
+
+	int startIndex;
+	int endIndex;
+
 	BVHNode()
+		: l(nullptr)
+		, r(nullptr)
+		, startIndex(0)
+		, endIndex(0)
 	{
-		r = NULL;
-		l = NULL;
 	}
-	// Note there are several options for how to implement the build method. Update this as required
-	void build(std::vector<Triangle>& inputTriangles)
+
+	static AABB triangleBounds(const Triangle& tri)
 	{
-		// Add BVH building code here
+		AABB box;
+		box.reset();
+		box.extend(tri.vertices[0].p);
+		box.extend(tri.vertices[1].p);
+		box.extend(tri.vertices[2].p);
+		return box;
 	}
+
+	void buildRecursive(std::vector<Triangle>& triangles, int start, int end)
+	{
+		bounds.reset();
+		for (int i = start; i < end; i++) {
+			bounds.extend(triangles[i].vertices[0].p);
+			bounds.extend(triangles[i].vertices[1].p);
+			bounds.extend(triangles[i].vertices[2].p);
+		}
+
+		int numTriangles = end - start;
+		if (numTriangles <= MAXNODE_TRIANGLES)
+		{
+			this->startIndex = start;
+			this->endIndex = end;
+			return;
+		}
+
+
+		Vec3 size = bounds.max - bounds.min;
+		int axis = 0;
+		if (size.y > size.x && size.y > size.z)
+			axis = 1;
+		else if (size.z > size.x && size.z > size.y)
+			axis = 2;
+
+		std::sort(triangles.begin() + start, triangles.begin() + end,
+			[axis](const Triangle& a, const Triangle& b) {
+				float ca = (axis == 0) ? a.centre().x : (axis == 1) ? a.centre().y : a.centre().z;
+				float cb = (axis == 0) ? b.centre().x : (axis == 1) ? b.centre().y : b.centre().z;
+				return ca < cb;
+			});
+
+		int n = numTriangles;
+		std::vector<AABB> leftBounds(n);
+		std::vector<AABB> rightBounds(n);
+		leftBounds[0] = triangleBounds(triangles[start]);
+		for (int i = 1; i < n; i++) {
+			leftBounds[i] = leftBounds[i - 1];
+			leftBounds[i].extend(triangleBounds(triangles[start + i]));
+		}
+		rightBounds[n - 1] = triangleBounds(triangles[end - 1]);
+		for (int i = n - 2; i >= 0; i--) {
+			rightBounds[i] = rightBounds[i + 1];
+			rightBounds[i].extend(triangleBounds(triangles[start + i]));
+		}
+
+		float totalArea = bounds.area();
+		float bestCost = FLT_MAX;
+		int bestSplit = -1;
+
+		for (int i = 1; i < n; i++) {
+			float leftArea = leftBounds[i - 1].area();
+			float rightArea = rightBounds[i].area();
+			int leftCount = i;
+			int rightCount = n - i;
+			float cost = 1.0f + (leftArea * leftCount + rightArea * rightCount) / totalArea;
+			if (cost < bestCost) {
+				bestCost = cost;
+				bestSplit = i;
+			}
+		}
+
+		if (bestCost >= static_cast<float>(numTriangles)) {
+			this->startIndex = start;
+			this->endIndex = end;
+			return;
+		}
+
+		int mid = start + bestSplit;
+		l = new BVHNode();
+		r = new BVHNode();
+		l->buildRecursive(triangles, start, mid);
+		r->buildRecursive(triangles, mid, end);
+	}
+
+	void build(std::vector<Triangle>& inputTriangles, std::vector<Triangle>& triangles)
+	{
+		triangles = inputTriangles;
+		buildRecursive(triangles, 0, static_cast<int>(triangles.size()));
+	}
+
 	void traverse(const Ray& ray, const std::vector<Triangle>& triangles, IntersectionData& intersection)
 	{
-		// Add BVH Traversal code here
+		float tBox;
+		if (!bounds.rayAABB(ray, tBox)) {
+			return;
+		}
+
+		if (!l && !r)
+		{
+			for (int i = startIndex; i < endIndex; i++)
+			{
+				float t, u, v;
+				if (triangles[i].rayIntersect(ray, t, u, v) && t > 1e-4f && t < intersection.t)
+				{
+					intersection.t = t;
+					intersection.alpha = u;
+					intersection.beta = v;
+					intersection.gamma = 1 - u - v;
+					intersection.ID = i;
+				}
+			}
+			return;
+		}
+
+		if (l) l->traverse(ray, triangles, intersection);
+		if (r) r->traverse(ray, triangles, intersection);
 	}
+
 	IntersectionData traverse(const Ray& ray, const std::vector<Triangle>& triangles)
 	{
 		IntersectionData intersection;
@@ -380,12 +516,39 @@ public:
 		traverse(ray, triangles, intersection);
 		return intersection;
 	}
-	bool traverseVisible(const Ray& ray, const std::vector<Triangle>& triangles, const float maxT)
+
+	bool traverseVisible(const Ray& ray, const std::vector<Triangle>& triangles, float maxT)
 	{
-		// Add visibility code here
-		return true;
+		float tBox;
+		float tMin, tMax;
+		if (!bounds.rayIntersect(ray, tMin, tMax)) {
+			return true;
+		}
+
+		if (tMin > maxT) {
+			return true;
+		}
+
+		if (!l && !r)
+		{
+			for (int i = startIndex; i < endIndex; i++)
+			{
+				float t, u, v;
+				if (triangles[i].rayIntersect(ray, t, u, v) && t > 1e-4f && t < maxT)
+				{
+					return false;
+				}
+			}
+			return true;
+		}
+
+		bool leftVis = l ? l->traverseVisible(ray, triangles, maxT) : true;
+		bool rightVis = r ? r->traverseVisible(ray, triangles, maxT) : true;
+		return leftVis && rightVis;
 	}
+
 };
+
 
 
 //#pragma once

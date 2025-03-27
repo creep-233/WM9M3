@@ -69,6 +69,7 @@ public:
 			{
 				// Trace
 				if (scene->visible(shadingData.x, p))
+				//if (scene->visible(shadingData.x + shadingData.sNormal * EPSILON, p))
 				{
 					// Shade
 					return shadingData.bsdf->evaluate(shadingData, wi) * emitted * GTerm / (pmf * pdf);

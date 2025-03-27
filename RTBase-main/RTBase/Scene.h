@@ -319,6 +319,9 @@ class Scene
 {
 public:
 	std::vector<Triangle> triangles;
+	std::vector<Triangle> originalTriangles; // 你的原始 mesh
+	std::vector<Triangle> bvhTriangles;      // 要传给 BVH 并由其内部使用的副本
+
 	std::vector<BSDF*> materials;
 	std::vector<Light*> lights;
 	Light* background = NULL;
@@ -329,11 +332,12 @@ public:
 	{
 		// Add BVH building code here
 
-		//std::vector<int> indices(triangles.size());
-		//for (int i = 0; i < triangles.size(); ++i) indices[i] = i;
-		//bvh = new BVHNode();
-		//bvh->build(triangles, indices);  // 构建 BVH 树结构
 
+		if (!bvh)
+			bvh = new BVHNode();
+
+		// 调用新的 build 函数（注意，这里要声明一个 trianglesCopy 用来排序）
+		bvh->build(triangles, triangles); // triangles 作为原始数据和副本都传进去
 
 		// Do not touch the code below this line!
 		// Build light list
@@ -427,6 +431,20 @@ public:
 		dir = dir.normalize();
 		ray.init(p1 + (dir * EPSILON), dir);
 		return bvh->traverseVisible(ray, triangles, maxT);
+		//for (int i = 0; i < triangles.size(); i++)
+		//{
+		//	float t;
+		//	float u;
+		//	float v;
+		//	if (triangles[i].rayIntersect(ray, t, u, v))
+		//	{
+		//		if (t < maxT)
+		//		{
+		//			return false;
+		//		}
+		//	}
+		//}
+		//return true;
 	}
 	Colour emit(Triangle* light, ShadingData shadingData, Vec3 wi)
 	{
