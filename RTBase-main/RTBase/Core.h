@@ -171,6 +171,20 @@ public:
 	{
 		return Vec3((y * v.z) - (z * v.y), (z * v.x) - (x * v.z), (x * v.y) - (y * v.x));
 	}
+	float& operator[](int i) {
+		if (i == 0) return x;
+		if (i == 1) return y;
+		if (i == 2) return z;
+		throw std::out_of_range("Vec3 index out of range");
+	}
+
+	const float& operator[](int i) const {
+		if (i == 0) return x;
+		if (i == 1) return y;
+		if (i == 2) return z;
+		throw std::out_of_range("Vec3 index out of range");
+	}
+
 };
 
 static float Dot(const Vec3 v1, const Vec3 v2)
@@ -518,7 +532,8 @@ public:
 		{
 			float l = 1.0f / sqrtf(w.x * w.x + w.z * w.z);
 			u = Vec3(w.z * l, 0.0f, -w.x * l);
-		} else
+		}
+		else
 		{
 			float l = 1.0f / sqrtf(w.y * w.y + w.z * w.z);
 			u = Vec3(0, w.z * l, -w.y * l);
@@ -558,3 +573,10 @@ public:
 		return (p < 0.0f) ? p + (2.0f * M_PI) : p;
 	}
 };
+
+template<typename T>
+T& use()
+{
+	static T t;
+	return t;
+}

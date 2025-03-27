@@ -133,6 +133,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="BVH.h" />
     <ClInclude Include="Core.h" />
     <ClInclude Include="GamesEngineeringBase.h" />
     <ClInclude Include="GEMLoader.h" />
