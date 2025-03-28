@@ -1,4 +1,4 @@
-//#pragma once
+ï»¿//#pragma once
 //
 //#include "Core.h"
 //#include "Sampling.h"
@@ -135,20 +135,20 @@
 //		//pmf = 1.0f / (float)Lights.size();
 //		//return lights[std::min(int)(r1 * Lights.size()), (int)(Lights.size() - 1))];
 //
-//			// 1. Éú³ÉËæ»úÊı r1
+//			// 1. ç”Ÿæˆéšæœºæ•° r1
 //		float r1 = sampler->next();
 //
-//		// 2. È·±£¹âÔ´ÊıÁ¿²»Îª 0
+//		// 2. ç¡®ä¿å…‰æºæ•°é‡ä¸ä¸º 0
 //		int numLights = lights.size();
 //		if (numLights == 0) return nullptr;
 //
-//		// 3. ¼ÆËã PMF
+//		// 3. è®¡ç®— PMF
 //		pmf = 1.0f / numLights;
 //
-//		// 4. ¼ÆËã¹âÔ´Ë÷Òı£¬²¢È·±£Ë÷Òı²»Ô½½ç
+//		// 4. è®¡ç®—å…‰æºç´¢å¼•ï¼Œå¹¶ç¡®ä¿ç´¢å¼•ä¸è¶Šç•Œ
 //		int lightIndex = std::min((int)(r1 * numLights), numLights - 1);
 //
-//		// 5. ·µ»ØÑ¡ÖĞµÄ¹âÔ´
+//		// 5. è¿”å›é€‰ä¸­çš„å…‰æº
 //		return lights[lightIndex];
 //
 //	}
@@ -319,8 +319,8 @@ class Scene
 {
 public:
 	std::vector<Triangle> triangles;
-	std::vector<Triangle> originalTriangles; // ÄãµÄÔ­Ê¼ mesh
-	std::vector<Triangle> bvhTriangles;      // Òª´«¸ø BVH ²¢ÓÉÆäÄÚ²¿Ê¹ÓÃµÄ¸±±¾
+	std::vector<Triangle> originalTriangles; // ä½ çš„åŸå§‹ mesh
+	std::vector<Triangle> bvhTriangles;      // è¦ä¼ ç»™ BVH å¹¶ç”±å…¶å†…éƒ¨ä½¿ç”¨çš„å‰¯æœ¬
 
 	std::vector<BSDF*> materials;
 	std::vector<Light*> lights;
@@ -336,8 +336,8 @@ public:
 		if (!bvh)
 			bvh = new BVHNode();
 
-		// µ÷ÓÃĞÂµÄ build º¯Êı£¨×¢Òâ£¬ÕâÀïÒªÉùÃ÷Ò»¸ö trianglesCopy ÓÃÀ´ÅÅĞò£©
-		bvh->build(triangles, triangles); // triangles ×÷ÎªÔ­Ê¼Êı¾İºÍ¸±±¾¶¼´«½øÈ¥
+		// è°ƒç”¨æ–°çš„ build å‡½æ•°ï¼ˆæ³¨æ„ï¼Œè¿™é‡Œè¦å£°æ˜ä¸€ä¸ª trianglesCopy ç”¨æ¥æ’åºï¼‰
+		bvh->build(triangles, triangles); // triangles ä½œä¸ºåŸå§‹æ•°æ®å’Œå‰¯æœ¬éƒ½ä¼ è¿›å»
 
 		// Do not touch the code below this line!
 		// Build light list
@@ -352,29 +352,55 @@ public:
 			}
 		}
 	}
+	//IntersectionData traverse(const Ray& ray)
+	//{
+	//	IntersectionData intersection;
+	//	intersection.t = FLT_MAX;
+	//	for (int i = 0; i < triangles.size(); i++)
+	//	{
+	//		float t;
+	//		float u;
+	//		float v;
+	//		if (triangles[i].rayIntersect(ray, t, u, v))
+	//		{
+	//			if (t < intersection.t)
+	//			{
+	//				intersection.t = t;
+	//				intersection.ID = i;
+	//				intersection.alpha = u;
+	//				intersection.beta = v;
+	//				intersection.gamma = 1.0f - (u + v);
+	//			}
+	//		}
+	//	}
+	//	return intersection;
+	//}
+	// 
+	
 	IntersectionData traverse(const Ray& ray)
 	{
+		if (bvh)
+			return bvh->traverse(ray, triangles); // âœ… ç”¨ä¸Š BVH
+
+		// fallback
 		IntersectionData intersection;
 		intersection.t = FLT_MAX;
 		for (int i = 0; i < triangles.size(); i++)
 		{
-			float t;
-			float u;
-			float v;
-			if (triangles[i].rayIntersect(ray, t, u, v))
+			float t, u, v;
+			if (triangles[i].rayIntersect(ray, t, u, v) && t < intersection.t)
 			{
-				if (t < intersection.t)
-				{
-					intersection.t = t;
-					intersection.ID = i;
-					intersection.alpha = u;
-					intersection.beta = v;
-					intersection.gamma = 1.0f - (u + v);
-				}
+				intersection.t = t;
+				intersection.ID = i;
+				intersection.alpha = u;
+				intersection.beta = v;
+				intersection.gamma = 1.0f - u - v;
 			}
 		}
 		return intersection;
 	}
+
+
 	//Light* sampleLight(Sampler* sampler, float& pmf)
 	//{
 	//	return NULL;
@@ -386,20 +412,20 @@ public:
 		//pmf = 1.0f / (float)Lights.size();
 		//return lights[std::min(int)(r1 * Lights.size()), (int)(Lights.size() - 1))];
 
-			// 1. Éú³ÉËæ»úÊı r1
+			// 1. ç”Ÿæˆéšæœºæ•° r1
 		float r1 = sampler->next();
 
-		// 2. È·±£¹âÔ´ÊıÁ¿²»Îª 0
+		// 2. ç¡®ä¿å…‰æºæ•°é‡ä¸ä¸º 0
 		int numLights = lights.size();
 		if (numLights == 0) return nullptr;
 
-		// 3. ¼ÆËã PMF
+		// 3. è®¡ç®— PMF
 		pmf = 1.0f / numLights;
 
-		// 4. ¼ÆËã¹âÔ´Ë÷Òı£¬²¢È·±£Ë÷Òı²»Ô½½ç
+		// 4. è®¡ç®—å…‰æºç´¢å¼•ï¼Œå¹¶ç¡®ä¿ç´¢å¼•ä¸è¶Šç•Œ
 		int lightIndex = std::min((int)(r1 * numLights), numLights - 1);
 
-		// 5. ·µ»ØÑ¡ÖĞµÄ¹âÔ´
+		// 5. è¿”å›é€‰ä¸­çš„å…‰æº
 		return lights[lightIndex];
 
 	}
