@@ -1,53 +1,65 @@
 ﻿  Main.cpp
-E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Imaging.h(242,23): warning C4018: “<”: 有符号/无符号不匹配
+E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Sampling.h(46,15): warning C4305: “return”: 从“double”到“float”截断
   (编译源文件“Main.cpp”)
   
-E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Imaging.h(242,48): warning C4018: “<”: 有符号/无符号不匹配
+E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Sampling.h(72,15): warning C4305: “return”: 从“double”到“float”截断
   (编译源文件“Main.cpp”)
   
-E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Imaging.h(250,21): warning C4018: “<”: 有符号/无符号不匹配
+E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Geometry.h(522,9): warning C4101: “tBox”: 未引用的局部变量
   (编译源文件“Main.cpp”)
   
-E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(96,70): warning C4305: “参数”: 从“double”到“const float”截断
+E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Imaging.h(201,23): warning C4018: “<”: 有符号/无符号不匹配
   (编译源文件“Main.cpp”)
   
-E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(103,59): warning C4305: “参数”: 从“double”到“const float”截断
+E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Imaging.h(201,48): warning C4018: “<”: 有符号/无符号不匹配
   (编译源文件“Main.cpp”)
   
-E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(138,70): warning C4305: “参数”: 从“double”到“const float”截断
+E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Imaging.h(209,21): warning C4018: “<”: 有符号/无符号不匹配
   (编译源文件“Main.cpp”)
   
-E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(145,59): warning C4305: “参数”: 从“double”到“const float”截断
+E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(582,70): warning C4305: “参数”: 从“double”到“const float”截断
   (编译源文件“Main.cpp”)
   
-E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(187,70): warning C4305: “参数”: 从“double”到“const float”截断
+E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(588,59): warning C4305: “参数”: 从“double”到“const float”截断
   (编译源文件“Main.cpp”)
   
-E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(194,59): warning C4305: “参数”: 从“double”到“const float”截断
+E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(623,70): warning C4305: “参数”: 从“double”到“const float”截断
   (编译源文件“Main.cpp”)
   
-E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(233,70): warning C4305: “参数”: 从“double”到“const float”截断
+E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(630,59): warning C4305: “参数”: 从“double”到“const float”截断
   (编译源文件“Main.cpp”)
   
-E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(240,59): warning C4305: “参数”: 从“double”到“const float”截断
+E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(673,70): warning C4305: “参数”: 从“double”到“const float”截断
   (编译源文件“Main.cpp”)
   
-E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(281,70): warning C4305: “参数”: 从“double”到“const float”截断
+E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(680,59): warning C4305: “参数”: 从“double”到“const float”截断
   (编译源文件“Main.cpp”)
   
-E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(288,59): warning C4305: “参数”: 从“double”到“const float”截断
+E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(720,70): warning C4305: “参数”: 从“double”到“const float”截断
   (编译源文件“Main.cpp”)
   
-E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(325,70): warning C4305: “参数”: 从“double”到“const float”截断
+E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(727,59): warning C4305: “参数”: 从“double”到“const float”截断
   (编译源文件“Main.cpp”)
   
-E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(332,59): warning C4305: “参数”: 从“double”到“const float”截断
+E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(769,70): warning C4305: “参数”: 从“double”到“const float”截断
   (编译源文件“Main.cpp”)
   
-E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(377,70): warning C4305: “参数”: 从“double”到“const float”截断
+E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(776,59): warning C4305: “参数”: 从“double”到“const float”截断
   (编译源文件“Main.cpp”)
   
-E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(384,59): warning C4305: “参数”: 从“double”到“const float”截断
+E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(814,70): warning C4305: “参数”: 从“double”到“const float”截断
+  (编译源文件“Main.cpp”)
+  
+E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(821,59): warning C4305: “参数”: 从“double”到“const float”截断
+  (编译源文件“Main.cpp”)
+  
+E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(867,70): warning C4305: “参数”: 从“double”到“const float”截断
+  (编译源文件“Main.cpp”)
+  
+E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Materials.h(874,59): warning C4305: “参数”: 从“double”到“const float”截断
+  (编译源文件“Main.cpp”)
+  
+E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\RTBase\Scene.h(393,17): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
   (编译源文件“Main.cpp”)
   
   RTBase.vcxproj -> E:\cs\C++\WM9M3\github\WM9M3\RTBase-main\x64\Debug\RTBase.exe

@@ -175,37 +175,81 @@ public:
 		}
 		return Colour(0.0f, 0.0f, 0.0f);
 	}
+	//void render()
+	//{
+	//	film->incrementSPP();
+	//	for (unsigned int y = 0; y < film->height; y++)
+	//	{
+	//		for (unsigned int x = 0; x < film->width; x++)
+	//		{
+	//			float px = x + 0.5f;
+	//			float py = y + 0.5f;
+	//			Ray ray = scene->camera.generateRay(px, py);
+	//			//Colour col = viewNormals(ray);
+	//			//Colour col = albedo(ray);
+	//			Colour col = direct(ray, samplers);
+
+	//			//int threadId = 0; // 如果你暂时只用单线程
+	//			//Colour col = direct(ray, &samplers[threadId]);
+
+	//			//Colour throughput(1.0f, 1.0f, 1.0f);
+	//			//Colour col = pathTrace(ray, throughput, 0, &samplers[threadId]);
+
+	//			film->splat(px, py, col);
+	//			unsigned char r = (unsigned char)(col.r * 255);
+	//			unsigned char g = (unsigned char)(col.g * 255);
+	//			unsigned char b = (unsigned char)(col.b * 255);
+
+	//			film->tonemap(x, y, r, g, b);
+
+	//			canvas->draw(x, y, r, g, b);
+	//		}
+	//	}
+	//}
+
 	void render()
 	{
 		film->incrementSPP();
-		for (unsigned int y = 0; y < film->height; y++)
-		{
-			for (unsigned int x = 0; x < film->width; x++)
+
+		auto renderBlock = [&](int threadId, int yStart, int yEnd) {
+			for (int y = yStart; y < yEnd; ++y)
 			{
-				float px = x + 0.5f;
-				float py = y + 0.5f;
-				Ray ray = scene->camera.generateRay(px, py);
-				//Colour col = viewNormals(ray);
-				//Colour col = albedo(ray);
-				Colour col = direct(ray, samplers);
+				for (unsigned int x = 0; x < film->width; ++x)
+				{
+					float px = x + 0.5f;
+					float py = y + 0.5f;
+					Ray ray = scene->camera.generateRay(px, py);
 
-				//int threadId = 0; // 如果你暂时只用单线程
-				//Colour col = direct(ray, &samplers[threadId]);
+					Colour col = direct(ray, &samplers[threadId]);
+					film->splat(px, py, col);
 
-				//Colour throughput(1.0f, 1.0f, 1.0f);
-				//Colour col = pathTrace(ray, throughput, 0, &samplers[threadId]);
+					unsigned char r = (unsigned char)(col.r * 255);
+					unsigned char g = (unsigned char)(col.g * 255);
+					unsigned char b = (unsigned char)(col.b * 255);
 
-				film->splat(px, py, col);
-				unsigned char r = (unsigned char)(col.r * 255);
-				unsigned char g = (unsigned char)(col.g * 255);
-				unsigned char b = (unsigned char)(col.b * 255);
-
-				film->tonemap(x, y, r, g, b);
-
-				canvas->draw(x, y, r, g, b);
+					film->tonemap(x, y, r, g, b);
+					canvas->draw(x, y, r, g, b);
+				}
 			}
+			};
+
+		int blockSize = film->height / numProcs;
+		std::vector<std::thread> threadPool;
+
+		for (int i = 0; i < numProcs; ++i)
+		{
+			int yStart = i * blockSize;
+			int yEnd = (i == numProcs - 1) ? film->height : yStart + blockSize;
+			threadPool.emplace_back(renderBlock, i, yStart, yEnd);
+		}
+
+		for (auto& t : threadPool)
+		{
+			t.join();
 		}
 	}
+
+
 	int getSPP()
 	{
 		return film->SPP;
