@@ -474,7 +474,7 @@
 //		return base->mask(shadingData);
 //	}
 //};
-
+//
 
 
 
@@ -515,6 +515,9 @@ class ShadingHelper
 public:
 	static float fresnelDielectric(float cosTheta, float iorInt, float iorExt)
 	{
+		// Calculate refracted direction
+		// Calculate Fresnel (|| and T)
+		// return average^2
 		// Add code here
 		return 1.0f;
 	}

@@ -1,4 +1,4 @@
-//#pragma once
+﻿//#pragma once
 //
 //#include "Core.h"
 //#include "Geometry.h"
@@ -342,17 +342,94 @@ class EnvironmentMap : public Light
 {
 public:
 	Texture* env;
+	std::vector<float> marginalDist; // 对 theta（v）方向上的边际分布
+	std::vector<std::vector<float>> conditionalDists; // 每一行的 phi（u）方向的条件分布
+
 	EnvironmentMap(Texture* _env)
 	{
 		env = _env;
+
+		marginalDist.resize(env->height);
+		conditionalDists.resize(env->height);
+
+		for (int y = 0; y < env->height; ++y) {
+			std::vector<float>& row = conditionalDists[y];
+			row.resize(env->width);
+			float rowSum = 0.0f;
+
+			float theta = M_PI * (y + 0.5f) / env->height;
+			float sinTheta = sinf(theta);
+
+			for (int x = 0; x < env->width; ++x) {
+				Colour c = env->texels[y * env->width + x];
+				float lum = c.Lum();
+				float weight = lum * sinTheta;
+				row[x] = weight;
+				rowSum += weight;
+			}
+			marginalDist[y] = rowSum;
+
+			// Normalize conditional distribution
+			if (rowSum > 0) {
+				for (float& val : row) val /= rowSum;
+			}
+		}
+
+		// Normalize marginal distribution
+		float marginalSum = 0.0f;
+		for (float val : marginalDist) marginalSum += val;
+		if (marginalSum > 0) {
+			for (float& val : marginalDist) val /= marginalSum;
+		}
 	}
 	Vec3 sample(const ShadingData& shadingData, Sampler* sampler, Colour& reflectedColour, float& pdf)
 	{
 		// Assignment: Update this code to importance sampling lighting based on luminance of each pixel
-		Vec3 wi = SamplingDistributions::uniformSampleSphere(sampler->next(), sampler->next());
-		pdf = SamplingDistributions::uniformSpherePDF(wi);
-		reflectedColour = evaluate(wi);
+		//Vec3 wi = SamplingDistributions::uniformSampleSphere(sampler->next(), sampler->next());
+		//pdf = SamplingDistributions::uniformSpherePDF(wi);
+		//reflectedColour = evaluate(wi);
+		//return wi;
+
+		float rv = sampler->next();
+		float ru = sampler->next();
+
+		// Sample row (v) from marginal distribution
+		int y = 0;
+		float acc = 0.0f;
+		for (; y < env->height - 1; ++y) {
+			acc += marginalDist[y];
+			if (rv <= acc) break;
+		}
+		rv = (float(y) + sampler->next()) / env->height;
+
+		// Sample column (u) from conditional distribution
+		const std::vector<float>& row = conditionalDists[y];
+		int x = 0;
+		acc = 0.0f;
+		for (; x < env->width - 1; ++x) {
+			acc += row[x];
+			if (ru <= acc) break;
+		}
+		ru = (float(x) + sampler->next()) / env->width;
+
+		reflectedColour = env->sample(ru, rv);
+
+		// Convert to world direction
+		float theta = rv * M_PI;
+		float phi = ru * 2.0f * M_PI;
+		float sinTheta = sinf(theta);
+		Vec3 wi = Vec3(sinTheta * cosf(phi), cosf(theta), sinTheta * sinf(phi));
+
+		// PDF: p(u, v) / (sinTheta * 2π²)
+		float marginalPDF = marginalDist[y];
+		float conditionalPDF = conditionalDists[y][x];
+		pdf = marginalPDF * conditionalPDF * env->width * env->height / (2.0f * M_PI * M_PI * sinTheta + EPSILON);
+
 		return wi;
+
+		std::cout << "Sampled direction: " << wi.x << " " << wi.y << " " << wi.z << ", PDF: " << pdf << "\n";
+
+
 	}
 	Colour evaluate(const Vec3& wi)
 	{
@@ -365,7 +442,22 @@ public:
 	float PDF(const ShadingData& shadingData, const Vec3& wi)
 	{
 		// Assignment: Update this code to return the correct PDF of luminance weighted importance sampling
-		return SamplingDistributions::uniformSpherePDF(wi);
+		//return SamplingDistributions::uniformSpherePDF(wi);
+
+		float theta = acosf(wi.y);
+		float phi = atan2f(wi.z, wi.x);
+		if (phi < 0) phi += 2.0f * M_PI;
+		float u = phi / (2.0f * M_PI);
+		float v = theta / M_PI;
+
+		int x = std::min(int(u * env->width), env->width - 1);
+		int y = std::min(int(v * env->height), env->height - 1);
+
+		float sinTheta = sinf(theta);
+		float marginalPDF = marginalDist[y];
+		float conditionalPDF = conditionalDists[y][x];
+		return marginalPDF * conditionalPDF * env->width * env->height / (2.0f * M_PI * M_PI * sinTheta + EPSILON);
+
 	}
 	bool isArea()
 	{
