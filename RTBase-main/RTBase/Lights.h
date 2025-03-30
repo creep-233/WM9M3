@@ -382,18 +382,63 @@ public:
 			for (float& val : marginalDist) val /= marginalSum;
 		}
 	}
+	//Vec3 sample(const ShadingData& shadingData, Sampler* sampler, Colour& reflectedColour, float& pdf)
+	//{
+	//	// Assignment: Update this code to importance sampling lighting based on luminance of each pixel
+	//	//Vec3 wi = SamplingDistributions::uniformSampleSphere(sampler->next(), sampler->next());
+	//	//pdf = SamplingDistributions::uniformSpherePDF(wi);
+	//	//reflectedColour = evaluate(wi);
+	//	//return wi;
+
+	//	float rv = sampler->next();
+	//	float ru = sampler->next();
+
+	//	// Sample row (v) from marginal distribution
+	//	int y = 0;
+	//	float acc = 0.0f;
+	//	for (; y < env->height - 1; ++y) {
+	//		acc += marginalDist[y];
+	//		if (rv <= acc) break;
+	//	}
+	//	rv = (float(y) + sampler->next()) / env->height;
+
+	//	// Sample column (u) from conditional distribution
+	//	const std::vector<float>& row = conditionalDists[y];
+	//	int x = 0;
+	//	acc = 0.0f;
+	//	for (; x < env->width - 1; ++x) {
+	//		acc += row[x];
+	//		if (ru <= acc) break;
+	//	}
+	//	ru = (float(x) + sampler->next()) / env->width;
+
+	//	reflectedColour = env->sample(ru, rv);
+
+	//	// Convert to world direction
+	//	float theta = rv * M_PI;
+	//	float phi = ru * 2.0f * M_PI;
+	//	float sinTheta = sinf(theta);
+	//	Vec3 wi = Vec3(sinTheta * cosf(phi), cosf(theta), sinTheta * sinf(phi));
+
+	//	// PDF: p(u, v) / (sinTheta * 2π²)
+	//	float marginalPDF = marginalDist[y];
+	//	float conditionalPDF = conditionalDists[y][x];
+	//	pdf = marginalPDF * conditionalPDF * env->width * env->height / (2.0f * M_PI * M_PI * sinTheta + EPSILON);
+
+	//	return wi;
+
+	//	std::cout << "Sampled direction: " << wi.x << " " << wi.y << " " << wi.z << ", PDF: " << pdf << "\n";
+
+
+	//}
+
 	Vec3 sample(const ShadingData& shadingData, Sampler* sampler, Colour& reflectedColour, float& pdf)
 	{
-		// Assignment: Update this code to importance sampling lighting based on luminance of each pixel
-		//Vec3 wi = SamplingDistributions::uniformSampleSphere(sampler->next(), sampler->next());
-		//pdf = SamplingDistributions::uniformSpherePDF(wi);
-		//reflectedColour = evaluate(wi);
-		//return wi;
-
+		// Importance sampling environment map using tabulated distribution
 		float rv = sampler->next();
 		float ru = sampler->next();
 
-		// Sample row (v) from marginal distribution
+		// === 1. Sample marginal (v - theta direction) ===
 		int y = 0;
 		float acc = 0.0f;
 		for (; y < env->height - 1; ++y) {
@@ -402,7 +447,7 @@ public:
 		}
 		rv = (float(y) + sampler->next()) / env->height;
 
-		// Sample column (u) from conditional distribution
+		// === 2. Sample conditional (u - phi direction) ===
 		const std::vector<float>& row = conditionalDists[y];
 		int x = 0;
 		acc = 0.0f;
@@ -412,25 +457,27 @@ public:
 		}
 		ru = (float(x) + sampler->next()) / env->width;
 
+		// === 3. Evaluate emission ===
 		reflectedColour = env->sample(ru, rv);
 
-		// Convert to world direction
+		// === 4. Convert (u,v) to direction vector ===
 		float theta = rv * M_PI;
 		float phi = ru * 2.0f * M_PI;
 		float sinTheta = sinf(theta);
-		Vec3 wi = Vec3(sinTheta * cosf(phi), cosf(theta), sinTheta * sinf(phi));
+		Vec3 wi = Vec3(
+			sinTheta * cosf(phi),
+			cosf(theta),
+			sinTheta * sinf(phi)
+		);
 
-		// PDF: p(u, v) / (sinTheta * 2π²)
+		// === 5. Compute PDF in solid angle ===
 		float marginalPDF = marginalDist[y];
 		float conditionalPDF = conditionalDists[y][x];
 		pdf = marginalPDF * conditionalPDF * env->width * env->height / (2.0f * M_PI * M_PI * sinTheta + EPSILON);
 
 		return wi;
-
-		std::cout << "Sampled direction: " << wi.x << " " << wi.y << " " << wi.z << ", PDF: " << pdf << "\n";
-
-
 	}
+
 	Colour evaluate(const Vec3& wi)
 	{
 		float u = atan2f(wi.z, wi.x);
@@ -439,26 +486,54 @@ public:
 		float v = acosf(wi.y) / M_PI;
 		return env->sample(u, v);
 	}
+	//float PDF(const ShadingData& shadingData, const Vec3& wi)
+	//{
+	//	// Assignment: Update this code to return the correct PDF of luminance weighted importance sampling
+	//	//return SamplingDistributions::uniformSpherePDF(wi);
+
+	//	float theta = acosf(wi.y);
+	//	float phi = atan2f(wi.z, wi.x);
+	//	if (phi < 0) phi += 2.0f * M_PI;
+	//	float u = phi / (2.0f * M_PI);
+	//	float v = theta / M_PI;
+
+	//	int x = std::min(int(u * env->width), env->width - 1);
+	//	int y = std::min(int(v * env->height), env->height - 1);
+
+	//	float sinTheta = sinf(theta);
+	//	float marginalPDF = marginalDist[y];
+	//	float conditionalPDF = conditionalDists[y][x];
+	//	return marginalPDF * conditionalPDF * env->width * env->height / (2.0f * M_PI * M_PI * sinTheta + EPSILON);
+
+	//}
+
 	float PDF(const ShadingData& shadingData, const Vec3& wi)
 	{
-		// Assignment: Update this code to return the correct PDF of luminance weighted importance sampling
-		//return SamplingDistributions::uniformSpherePDF(wi);
-
+		// Convert direction to spherical coordinates (theta, phi)
 		float theta = acosf(wi.y);
 		float phi = atan2f(wi.z, wi.x);
-		if (phi < 0) phi += 2.0f * M_PI;
+		if (phi < 0.0f) phi += 2.0f * M_PI;
+
+		// Convert to (u, v) in [0,1]
 		float u = phi / (2.0f * M_PI);
 		float v = theta / M_PI;
 
+		// Discrete bin index
 		int x = std::min(int(u * env->width), env->width - 1);
 		int y = std::min(int(v * env->height), env->height - 1);
 
 		float sinTheta = sinf(theta);
+		if (sinTheta < 1e-6f) return 0.0f;  // Prevent division by zero
+
+		// Lookup tabulated PDF
 		float marginalPDF = marginalDist[y];
 		float conditionalPDF = conditionalDists[y][x];
-		return marginalPDF * conditionalPDF * env->width * env->height / (2.0f * M_PI * M_PI * sinTheta + EPSILON);
 
+		// Convert to solid angle density
+		return marginalPDF * conditionalPDF * env->width * env->height / (2.0f * M_PI * M_PI * sinTheta + EPSILON);
 	}
+
+
 	bool isArea()
 	{
 		return false;

@@ -507,4 +507,20 @@ public:
 		}
 		return shadingData;
 	}
+
+	Light* getLightFromHit(const IntersectionData& isect)
+	{
+		if (isect.t >= FLT_MAX) return nullptr;
+		for (auto* light : lights)
+		{
+			if (!light->isArea()) continue;
+
+			AreaLight* area = dynamic_cast<AreaLight*>(light);
+			if (area && area->triangle == &triangles[isect.ID])
+			{
+				return light;
+			}
+		}
+		return nullptr;
+	}
 };

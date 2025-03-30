@@ -42,57 +42,167 @@ public:
 
 
 
+	//Colour computeDirect(ShadingData shadingData, Sampler* sampler)
+	//{
+	//	if (shadingData.bsdf->isPureSpecular() == true)
+	//	{
+	//		return Colour(0.0f, 0.0f, 0.0f);
+	//	}
+	//	// Sample a light
+	//	float pmf;
+	//	Light* light = scene->sampleLight(sampler, pmf);
+	//	if (!light || !light->isArea())
+	//		return Colour(0.0f, 0.0f, 0.0f);  // 跳过非 area 光源（例如 background）
+
+	//	// Sample a point on the light
+	//	float pdf;
+	//	Colour emitted;
+	//	Vec3 p = light->sample(shadingData, sampler, emitted, pdf);
+	//	if (light->isArea())
+	//	{
+	//		// Calculate GTerm
+	//		Vec3 wi = p - shadingData.x;
+	//		float l = wi.lengthSq();
+	//		wi = wi.normalize();
+	//		float GTerm = (max(Dot(wi, shadingData.sNormal), 0.0f) * max(-Dot(wi, light->normal(shadingData, wi)), 0.0f)) / l;
+	//		if (GTerm > 0)
+	//		{
+	//			// Trace
+	//			if (scene->visible(shadingData.x, p))
+	//			//if (scene->visible(shadingData.x + shadingData.sNormal * EPSILON, p))
+	//			{
+	//				// Shade
+	//				return shadingData.bsdf->evaluate(shadingData, wi) * emitted * GTerm / (pmf * pdf);
+	//			}
+	//		}
+	//	}
+	//	else
+	//	{
+	//		// Calculate GTerm
+	//		Vec3 wi = p;
+	//		float GTerm = max(Dot(wi, shadingData.sNormal), 0.0f);
+	//		if (GTerm > 0)
+	//		{
+	//			// Trace
+	//			if (scene->visible(shadingData.x, shadingData.x + (p * 10000.0f)))
+	//			{
+	//				// Shade
+	//				return shadingData.bsdf->evaluate(shadingData, wi) * emitted * GTerm / (pmf * pdf);
+	//			}
+	//		}
+	//	}
+	//	return Colour(0.0f, 0.0f, 0.0f);
+	//}
+
 	Colour computeDirect(ShadingData shadingData, Sampler* sampler)
 	{
-		if (shadingData.bsdf->isPureSpecular() == true)
-		{
-			return Colour(0.0f, 0.0f, 0.0f);
-		}
-		// Sample a light
+		if (shadingData.bsdf->isPureSpecular())
+			return Colour(0.0f,0.0f,0.0f);
+
+		Colour result = Colour(0.0f, 0.0f, 0.0f);
+
+
+		// Light sampling path
+
+		//float pmf;
+		//Light* light = scene->sampleLight(sampler, pmf);
+		//if (light && pmf > 0.0f)
+		//{
+		//	float lightPdf;
+		//	Colour Le;
+		//	Vec3 wi = light->sample(shadingData, sampler, Le, lightPdf);
+
+		//	if (lightPdf > 0.0f && Le.Lum() > 0.0f)
+		//	{
+		//		float bsdfPdf = shadingData.bsdf->PDF(shadingData, wi);
+		//		float weight = (lightPdf * pmf) / (lightPdf * pmf + bsdfPdf + EPSILON);
+
+		//		float G = max(Dot(wi, shadingData.sNormal), 0.0f);
+		//		if (G > 0.0f && scene->visible(shadingData.x, shadingData.x + wi * 10000.0f))
+		//		{
+		//			Colour f = shadingData.bsdf->evaluate(shadingData, wi);
+		//			Colour contrib = f * Le * G * weight / (lightPdf * pmf);
+		//			result = result + contrib;
+		//		}
+		//	}
+		//}
+
 		float pmf;
 		Light* light = scene->sampleLight(sampler, pmf);
-		if (!light || !light->isArea())
-			return Colour(0.0f, 0.0f, 0.0f);  // 跳过非 area 光源（例如 background）
+		if (light && pmf > 0.0f)
+		{
+			float lightPdf;
+			Colour Le;
 
-		// Sample a point on the light
-		float pdf;
-		Colour emitted;
-		Vec3 p = light->sample(shadingData, sampler, emitted, pdf);
-		if (light->isArea())
-		{
-			// Calculate GTerm
-			Vec3 wi = p - shadingData.x;
-			float l = wi.lengthSq();
-			wi = wi.normalize();
-			float GTerm = (max(Dot(wi, shadingData.sNormal), 0.0f) * max(-Dot(wi, light->normal(shadingData, wi)), 0.0f)) / l;
-			if (GTerm > 0)
+			Vec3 wi;
+			float G = 1.0f;
+
+			if (light->isArea())
 			{
-				// Trace
-				if (scene->visible(shadingData.x, p))
-				//if (scene->visible(shadingData.x + shadingData.sNormal * EPSILON, p))
+				Vec3 p = light->sample(shadingData, sampler, Le, lightPdf);
+				wi = (p - shadingData.x);
+				float l2 = wi.lengthSq();
+				wi = wi.normalize();
+				G = (max(Dot(wi, shadingData.sNormal), 0.0f) * max(-Dot(wi, light->normal(shadingData, wi)), 0.0f)) / (l2 + EPSILON);
+
+				if (G > 0.0f && scene->visible(shadingData.x, p))
 				{
-					// Shade
-					return shadingData.bsdf->evaluate(shadingData, wi) * emitted * GTerm / (pmf * pdf);
+					float bsdfPdf = shadingData.bsdf->PDF(shadingData, wi);
+					float weight = (lightPdf * pmf) / (lightPdf * pmf + bsdfPdf + EPSILON);
+					Colour f = shadingData.bsdf->evaluate(shadingData, wi);
+					result = result + f * Le * G * weight / (lightPdf * pmf);
+				}
+			}
+			else
+			{
+				wi = light->sample(shadingData, sampler, Le, lightPdf); // environment
+				G = max(Dot(wi, shadingData.sNormal), 0.0f);
+				if (G > 0.0f && scene->visible(shadingData.x, shadingData.x + wi * 10000.0f))
+				{
+					float bsdfPdf = shadingData.bsdf->PDF(shadingData, wi);
+					float weight = (lightPdf * pmf) / (lightPdf * pmf + bsdfPdf + EPSILON);
+					Colour f = shadingData.bsdf->evaluate(shadingData, wi);
+					result = result + f * Le * G * weight / (lightPdf * pmf);
 				}
 			}
 		}
-		else
+
+
+		// BSDF sampling path
+
+		float bsdfPdf;
+		Colour f;
+		Vec3 wi_bsdf = shadingData.bsdf->sample(shadingData, sampler, f, bsdfPdf);
+
+		if (bsdfPdf > 0.0f)
 		{
-			// Calculate GTerm
-			Vec3 wi = p;
-			float GTerm = max(Dot(wi, shadingData.sNormal), 0.0f);
-			if (GTerm > 0)
+			Ray shadowRay(shadingData.x + shadingData.sNormal * EPSILON, wi_bsdf);
+			IntersectionData isect = scene->traverse(shadowRay);
+			if (isect.t < FLT_MAX)
 			{
-				// Trace
-				if (scene->visible(shadingData.x, shadingData.x + (p * 10000.0f)))
+				ShadingData lightHit = scene->calculateShadingData(isect, shadowRay);
+				if (lightHit.bsdf && lightHit.bsdf->isLight())
 				{
-					// Shade
-					return shadingData.bsdf->evaluate(shadingData, wi) * emitted * GTerm / (pmf * pdf);
+					Colour Le = lightHit.bsdf->emit(lightHit, -wi_bsdf);
+					float lightPdf = 0.0f;
+					Light* hitLight = scene->getLightFromHit(isect);
+					if (hitLight)
+						lightPdf = hitLight->PDF(shadingData, wi_bsdf);
+
+					float weight = bsdfPdf / (bsdfPdf + lightPdf * pmf + EPSILON);
+					float cosTheta = max(Dot(wi_bsdf, shadingData.sNormal), 0.0f);
+					Colour contrib = f * Le * cosTheta * weight / bsdfPdf;
+					result = result + contrib;
 				}
 			}
 		}
-		return Colour(0.0f, 0.0f, 0.0f);
+
+		return result;
 	}
+
+
+
+
 	Colour pathTrace(Ray& r, Colour& pathThroughput, int depth, Sampler* sampler, bool canHitLight = true)
 	{
 		IntersectionData intersection = scene->traverse(r);
