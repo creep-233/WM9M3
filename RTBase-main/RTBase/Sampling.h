@@ -71,4 +71,19 @@ public:
 	{
 		return 1.0f / (4.0f * M_PI);
 	}
+
+	static Vec3 GGXSample(float alpha, float u1, float u2)
+	{
+		// Trowbridge-Reitz GGX importance sampling of the half-vector h
+		float phi = 2.0f * M_PI * u1;
+
+		// Transform uniform random variable u2 into the distribution of h.z
+		float cosTheta = sqrtf((1.0f - u2) / (1.0f + (alpha * alpha - 1.0f) * u2));
+		float sinTheta = sqrtf(1.0f - cosTheta * cosTheta);
+
+		return Vec3(cosf(phi) * sinTheta, sinf(phi) * sinTheta, cosTheta);
+	}
+
+
+
 };

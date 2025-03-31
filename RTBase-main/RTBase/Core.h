@@ -92,6 +92,12 @@ public:
 	}
 };
 
+static Colour sqrt(const Colour& c) {
+	return Colour(sqrtf(c.r), sqrtf(c.g), sqrtf(c.b));
+}
+
+
+
 class Vec3
 {
 public:
@@ -207,6 +213,12 @@ static Vec3 Min(Vec3 a, Vec3 b)
 {
 	return Vec3(a.x < b.x ? a.x : b.x, a.y < b.y ? a.y : b.y, a.z < b.z ? a.z : b.z);
 }
+
+static Vec3 Reflect(const Vec3& v, const Vec3& n)
+{
+	return v - n * (2.0f * Dot(v, n));
+}
+
 
 struct Vertex
 {

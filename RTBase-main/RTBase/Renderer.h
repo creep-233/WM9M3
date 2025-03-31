@@ -42,58 +42,6 @@ public:
 
 
 
-	//Colour computeDirect(ShadingData shadingData, Sampler* sampler)
-	//{
-	//	if (shadingData.bsdf->isPureSpecular() == true)
-	//	{
-	//		return Colour(0.0f, 0.0f, 0.0f);
-	//	}
-	//	// Sample a light
-	//	float pmf;
-	//	Light* light = scene->sampleLight(sampler, pmf);
-	//	if (!light || !light->isArea())
-	//		return Colour(0.0f, 0.0f, 0.0f);  // 跳过非 area 光源（例如 background）
-
-	//	// Sample a point on the light
-	//	float pdf;
-	//	Colour emitted;
-	//	Vec3 p = light->sample(shadingData, sampler, emitted, pdf);
-	//	if (light->isArea())
-	//	{
-	//		// Calculate GTerm
-	//		Vec3 wi = p - shadingData.x;
-	//		float l = wi.lengthSq();
-	//		wi = wi.normalize();
-	//		float GTerm = (max(Dot(wi, shadingData.sNormal), 0.0f) * max(-Dot(wi, light->normal(shadingData, wi)), 0.0f)) / l;
-	//		if (GTerm > 0)
-	//		{
-	//			// Trace
-	//			if (scene->visible(shadingData.x, p))
-	//			//if (scene->visible(shadingData.x + shadingData.sNormal * EPSILON, p))
-	//			{
-	//				// Shade
-	//				return shadingData.bsdf->evaluate(shadingData, wi) * emitted * GTerm / (pmf * pdf);
-	//			}
-	//		}
-	//	}
-	//	else
-	//	{
-	//		// Calculate GTerm
-	//		Vec3 wi = p;
-	//		float GTerm = max(Dot(wi, shadingData.sNormal), 0.0f);
-	//		if (GTerm > 0)
-	//		{
-	//			// Trace
-	//			if (scene->visible(shadingData.x, shadingData.x + (p * 10000.0f)))
-	//			{
-	//				// Shade
-	//				return shadingData.bsdf->evaluate(shadingData, wi) * emitted * GTerm / (pmf * pdf);
-	//			}
-	//		}
-	//	}
-	//	return Colour(0.0f, 0.0f, 0.0f);
-	//}
-
 	Colour computeDirect(ShadingData shadingData, Sampler* sampler)
 	{
 		if (shadingData.bsdf->isPureSpecular())
@@ -103,29 +51,6 @@ public:
 
 
 		// Light sampling path
-
-		//float pmf;
-		//Light* light = scene->sampleLight(sampler, pmf);
-		//if (light && pmf > 0.0f)
-		//{
-		//	float lightPdf;
-		//	Colour Le;
-		//	Vec3 wi = light->sample(shadingData, sampler, Le, lightPdf);
-
-		//	if (lightPdf > 0.0f && Le.Lum() > 0.0f)
-		//	{
-		//		float bsdfPdf = shadingData.bsdf->PDF(shadingData, wi);
-		//		float weight = (lightPdf * pmf) / (lightPdf * pmf + bsdfPdf + EPSILON);
-
-		//		float G = max(Dot(wi, shadingData.sNormal), 0.0f);
-		//		if (G > 0.0f && scene->visible(shadingData.x, shadingData.x + wi * 10000.0f))
-		//		{
-		//			Colour f = shadingData.bsdf->evaluate(shadingData, wi);
-		//			Colour contrib = f * Le * G * weight / (lightPdf * pmf);
-		//			result = result + contrib;
-		//		}
-		//	}
-		//}
 
 		float pmf;
 		Light* light = scene->sampleLight(sampler, pmf);
@@ -285,41 +210,39 @@ public:
 		}
 		return Colour(0.0f, 0.0f, 0.0f);
 	}
-	//void render()
-	//{
-	//	film->incrementSPP();
-	//	for (unsigned int y = 0; y < film->height; y++)
-	//	{
-	//		for (unsigned int x = 0; x < film->width; x++)
-	//		{
-	//			float px = x + 0.5f;
-	//			float py = y + 0.5f;
-	//			Ray ray = scene->camera.generateRay(px, py);
-	//			//Colour col = viewNormals(ray);
-	//			//Colour col = albedo(ray);
-	//			Colour col = direct(ray, samplers);
 
-	//			//int threadId = 0; // 如果你暂时只用单线程
-	//			//Colour col = direct(ray, &samplers[threadId]);
 
-	//			//Colour throughput(1.0f, 1.0f, 1.0f);
-	//			//Colour col = pathTrace(ray, throughput, 0, &samplers[threadId]);
-
-	//			film->splat(px, py, col);
-	//			unsigned char r = (unsigned char)(col.r * 255);
-	//			unsigned char g = (unsigned char)(col.g * 255);
-	//			unsigned char b = (unsigned char)(col.b * 255);
-
-	//			film->tonemap(x, y, r, g, b);
-
-	//			canvas->draw(x, y, r, g, b);
-	//		}
-	//	}
-	//}
+	template<typename T>
+	inline T clamp(T x, T a, T b)
+	{
+		return x < a ? a : (x > b ? b : x);
+	}
 
 	void render()
 	{
 		film->incrementSPP();
+
+		//auto renderBlock = [&](int threadId, int yStart, int yEnd) {
+		//	for (int y = yStart; y < yEnd; ++y)
+		//	{
+		//		for (unsigned int x = 0; x < film->width; ++x)
+		//		{
+		//			float px = x + 0.5f;
+		//			float py = y + 0.5f;
+		//			Ray ray = scene->camera.generateRay(px, py);
+
+		//			Colour col = direct(ray, &samplers[threadId]);
+		//			film->splat(px, py, col);
+
+		//			unsigned char r = (unsigned char)(col.r * 255);
+		//			unsigned char g = (unsigned char)(col.g * 255);
+		//			unsigned char b = (unsigned char)(col.b * 255);
+
+		//			film->tonemap(x, y, r, g, b);
+		//			canvas->draw(x, y, r, g, b);
+		//		}
+		//	}
+		//	};
 
 		auto renderBlock = [&](int threadId, int yStart, int yEnd) {
 			for (int y = yStart; y < yEnd; ++y)
@@ -328,20 +251,50 @@ public:
 				{
 					float px = x + 0.5f;
 					float py = y + 0.5f;
-					Ray ray = scene->camera.generateRay(px, py);
 
-					Colour col = direct(ray, &samplers[threadId]);
-					film->splat(px, py, col);
+					Colour accum = Colour(0.0f, 0.0f, 0.0f);
+					float sumLum = 0.0f;
+					float sumLum2 = 0.0f;
 
-					unsigned char r = (unsigned char)(col.r * 255);
-					unsigned char g = (unsigned char)(col.g * 255);
-					unsigned char b = (unsigned char)(col.b * 255);
+					//Adaptive Sampling
+					//This will affect the running speed
+					const int maxSamples = 8;
+					const int minSamples = 2;
+					const float varianceThreshold = 0.001f;
+
+					int s = 0;
+					for (; s < maxSamples; ++s)
+					{
+						Ray ray = scene->camera.generateRay(px, py);
+						Colour sample = direct(ray, &samplers[threadId]);
+
+						accum = accum + sample;
+						float lum = sample.Lum();
+						sumLum += lum;
+						sumLum2 += lum * lum;
+
+						if (s >= minSamples)
+						{
+							float mean = sumLum / (s + 1);
+							float var = (sumLum2 / (s + 1)) - (mean * mean);
+							if (var < varianceThreshold)
+								break;  // stop early
+						}
+					}
+
+					Colour final = accum / float(s + 1);
+					film->splat(px, py, final);
+
+					unsigned char r = (unsigned char)(clamp(final.r, 0.0f, 1.0f) * 255);
+					unsigned char g = (unsigned char)(clamp(final.g, 0.0f, 1.0f) * 255);
+					unsigned char b = (unsigned char)(clamp(final.b, 0.0f, 1.0f) * 255);
 
 					film->tonemap(x, y, r, g, b);
 					canvas->draw(x, y, r, g, b);
 				}
 			}
 			};
+
 
 		int blockSize = film->height / numProcs;
 		std::vector<std::thread> threadPool;
