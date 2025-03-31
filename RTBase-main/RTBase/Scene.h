@@ -380,7 +380,7 @@ public:
 	IntersectionData traverse(const Ray& ray)
 	{
 		if (bvh)
-			return bvh->traverse(ray, triangles); // ✅ 用上 BVH
+			return bvh->traverse(ray, triangles); 
 
 		// fallback
 		IntersectionData intersection;

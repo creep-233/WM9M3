@@ -284,6 +284,11 @@ public:
 
 					Colour final = accum / float(s + 1);
 					film->splat(px, py, final);
+					if (final.Lum() < 1e-4f) {
+						// 可以标记黑色点
+						final = Colour(1.0f, 0.0f, 1.0f); // 粉色警告色
+					}
+
 
 					unsigned char r = (unsigned char)(clamp(final.r, 0.0f, 1.0f) * 255);
 					unsigned char g = (unsigned char)(clamp(final.g, 0.0f, 1.0f) * 255);

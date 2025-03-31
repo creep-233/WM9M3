@@ -31,12 +31,12 @@ class SamplingDistributions
 public:
 	static Vec3 uniformSampleHemisphere(float r1, float r2) {
 
-		float theta = acos(r1);           // 计算仰角
-		float phi = 2.0f * M_PI * r2;     // 计算方位角
+		float theta = acos(r1);          
+		float phi = 2.0f * M_PI * r2;     
 
-		float x = sin(theta) * cos(phi);  // 转换为笛卡尔坐标系
+		float x = sin(theta) * cos(phi);  
 		float y = sin(theta) * sin(phi);
-		float z = cos(theta);             // 在半球上，z 始终是正的
+		float z = cos(theta);            
 
 		return Vec3(x, y, z);
 
@@ -49,19 +49,29 @@ public:
 	static Vec3 cosineSampleHemisphere(float r1, float r2)
 	{
 		// Add code here
-		return Vec3(0, 0, 1);
+		//return Vec3(0, 0, 1);
+		float r = sqrtf(r1);
+		float theta = 2.0f * M_PI * r2;
+
+		float x = r * cosf(theta);
+		float y = r * sinf(theta);
+		float z = sqrtf(std::max(0.0f, 1.0f - x * x - y * y));  
+
+		return Vec3(x, y, z);
 	}
 	static float cosineHemispherePDF(const Vec3 wi)
 	{
 		// Add code here
-		return 1.0f;
+		//return 1.0f;
+		if (wi.z <= 0.0f) return 0.0f;  
+		return wi.z / M_PI;
 	}
 	static Vec3 uniformSampleSphere(float r1, float r2)
 	{
-		float theta = acos(1 - 2 * r1); // 计算仰角
-		float phi = 2.0f * M_PI * r2;   // 计算方位角
+		float theta = acos(1 - 2 * r1); 
+		float phi = 2.0f * M_PI * r2;   
 
-		float x = sin(theta) * cos(phi);  // 转换为笛卡尔坐标
+		float x = sin(theta) * cos(phi);  
 		float y = sin(theta) * sin(phi);
 		float z = cos(theta);
 

@@ -216,6 +216,9 @@ public:
 		r = std::min(powf(std::max(pixel.r, 0.0f), 1.0f / 2.2f) * 255, 255.0f);
 		g = std::min(powf(std::max(pixel.g, 0.0f), 1.0f / 2.2f) * 255, 255.0f);
 		b = std::min(powf(std::max(pixel.b, 0.0f), 1.0f / 2.2f) * 255, 255.0f);
+		if (SPP == 0) {
+			std::cerr << "SPP == 0 in tonemap! x=" << x << ", y=" << y << std::endl;
+		}
 	}
 
 

@@ -76,7 +76,8 @@
 //	}
 //	Vec3 sampleDirectionFromLight(Sampler* sampler, float& pdf)
 //	{
-//		// Add code to sample a direction from the light
+//		// 
+// to sample a direction from the light
 //		Vec3 wi = Vec3(0, 0, 1);
 //		pdf = 1.0f;
 //		Frame frame;

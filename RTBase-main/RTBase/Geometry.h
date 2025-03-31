@@ -90,17 +90,42 @@ public:
 	bool rayIntersect(const Ray& r, float& t, float& u, float& v) const
 	{
 		
-		float denom = Dot(n, r.dir);
-		if (denom == 0) { return false; }
-		t = (d - Dot(n, r.o)) / denom;
-		if (t < 0) { return false; }
-		Vec3 p = r.at(t);
-		float invArea = 1.0f / Dot(e1.cross(e2), n);
-		u = Dot(e1.cross(p - vertices[1].p), n) * invArea;
-		if (u < 0 || u > 1.0f) { return false; }
-		v = Dot(e2.cross(p - vertices[2].p), n) * invArea;
-		if (v < 0 || (u + v) > 1.0f) { return false; }
-		return true;
+		//float denom = Dot(n, r.dir);
+		//if (denom == 0) { return false; }
+		//t = (d - Dot(n, r.o)) / denom;
+		//if (t < 0) { return false; }
+		//Vec3 p = r.at(t);
+		//float invArea = 1.0f / Dot(e1.cross(e2), n);
+		//u = Dot(e1.cross(p - vertices[1].p), n) * invArea;
+		//if (u < 0 || u > 1.0f) { return false; }
+		//v = Dot(e2.cross(p - vertices[2].p), n) * invArea;
+		//if (v < 0 || (u + v) > 1.0f) { return false; }
+		//return true;
+
+		const Vec3& p0 = vertices[0].p;
+		const Vec3& p1 = vertices[1].p;
+		const Vec3& p2 = vertices[2].p;
+
+		Vec3 edge1 = p1 - p0;
+		Vec3 edge2 = p2 - p0;
+		Vec3 h = r.dir.cross(edge2); 
+		float a = Dot(edge1, h);
+		if (fabs(a) < EPSILON) return false;
+
+		float f = 1.0f / a;
+		Vec3 s = r.o - p0;
+		u = f * Dot(s, h);
+		if (u < 0.0f || u > 1.0f) return false;
+
+		Vec3 q = s.cross(edge1);
+		v = f * Dot(r.dir, q);
+		if (v < 0.0f || u + v > 1.0f) return false;
+
+		t = f * Dot(edge2, q);
+		if (t > EPSILON)
+			return true;
+
+		return false;
 
 	}
 	void interpolateAttributes(const float alpha, const float beta, const float gamma, Vec3& interpolatedNormal, float& interpolatedU, float& interpolatedV) const
@@ -232,6 +257,28 @@ public:
 	// Add code here
 	bool rayIntersect(Ray& r, float& t)
 	{
+		//return false;
+		Vec3 L = centre - r.o;
+		float tca = Dot(L, r.dir);
+		if (tca < 0) return false;
+
+		float d2 = Dot(L, L) - tca * tca;
+		float radius2 = radius * radius;
+		if (d2 > radius2) return false;
+
+		float thc = sqrt(radius2 - d2);
+		float t0 = tca - thc;
+		float t1 = tca + thc;
+
+		if (t0 > EPSILON) {
+			t = t0;
+			return true;
+		}
+		else if (t1 > EPSILON) {
+			t = t1;
+			return true;
+		}
+
 		return false;
 	}
 };
@@ -249,127 +296,6 @@ struct IntersectionData
 #define TRAVERSE_COST 1.0f
 #define TRIANGLE_COST 2.0f
 #define BUILD_BINS 32
-
-//class BVHNode
-//{
-//public:
-//	AABB bounds;
-//	BVHNode* r;
-//	BVHNode* l;
-//
-//	std::vector<int> triangleIndices; // 用于记录该节点包含的三角形索引
-//
-//	// This can store an offset and number of triangles in a global triangle list for example
-//	// But you can store this however you want!
-//	// unsigned int offset;
-//	// unsigned char num;
-//	BVHNode()
-//	{
-//		r = NULL;
-//		l = NULL;
-//	}
-//	// Note there are several options for how to implement the build method. Update this as required
-//	void build(std::vector<Triangle>& inputTriangles)
-//	{
-//		// 创建初始索引数组
-//		triangleIndices.clear();
-//		for (int i = 0; i < inputTriangles.size(); i++)
-//			triangleIndices.push_back(i);
-//
-//		buildRecursive(inputTriangles, triangleIndices, 0);
-//	}
-//	void buildRecursive(std::vector<Triangle>& triangles, std::vector<int>& triIndices, int depth)
-//	{
-//		bounds.reset();
-//		for (int i : triIndices)
-//		{
-//			for (int v = 0; v < 3; v++)
-//				bounds.extend(triangles[i].vertices[v].p);
-//		}
-//
-//		// 叶子节点
-//		if (triIndices.size() <= 4 || depth >= 16)
-//		{
-//			triangleIndices = triIndices;
-//			return;
-//		}
-//
-//		// 选择最长轴
-//		AABB centroidBounds;
-//		for (int i : triIndices)
-//			centroidBounds.extend(triangles[i].centre());
-//
-//		Vec3 extent = centroidBounds.max - centroidBounds.min;
-//		int axis = (extent.x > extent.y) ? ((extent.x > extent.z) ? 0 : 2) : ((extent.y > extent.z) ? 1 : 2);
-//
-//		std::sort(triIndices.begin(), triIndices.end(), [&](int a, int b) {
-//			return triangles[a].centre()[axis] < triangles[b].centre()[axis];
-//			});
-//
-//		int mid = triIndices.size() / 2;
-//		std::vector<int> leftIndices(triIndices.begin(), triIndices.begin() + mid);
-//		std::vector<int> rightIndices(triIndices.begin() + mid, triIndices.end());
-//
-//		l = new BVHNode();
-//		l->buildRecursive(triangles, leftIndices, depth + 1);
-//		r = new BVHNode();
-//		r->buildRecursive(triangles, rightIndices, depth + 1);
-//	}
-//	void traverse(const Ray& ray, const std::vector<Triangle>& triangles, IntersectionData& intersection)
-//	{
-//		float tMin, tMax;
-//		if (!bounds.rayIntersect(ray, tMin, tMax)) return;
-//
-//		if (l == nullptr && r == nullptr)
-//		{
-//			for (int i : triangleIndices)
-//			{
-//				float t, u, v;
-//				if (triangles[i].rayIntersect(ray, t, u, v) && t < intersection.t)
-//				{
-//					intersection.t = t;
-//					intersection.ID = i;
-//					intersection.alpha = u;
-//					intersection.beta = v;
-//					intersection.gamma = 1.0f - u - v;
-//				}
-//			}
-//			return;
-//		}
-//
-//		if (l) l->traverse(ray, triangles, intersection);
-//		if (r) r->traverse(ray, triangles, intersection);
-//	}
-//	IntersectionData traverse(const Ray& ray, const std::vector<Triangle>& triangles)
-//	{
-//		IntersectionData intersection;
-//		intersection.t = FLT_MAX;
-//		traverse(ray, triangles, intersection);
-//		return intersection;
-//	}
-//	bool traverseVisible(const Ray& ray, const std::vector<Triangle>& triangles, const float maxT)
-//	{
-//		float tMin, tMax;
-//
-//		if (!bounds.rayIntersect(ray, tMin, tMax) || tMin > maxT) return false;
-//
-//		if (l == nullptr && r == nullptr)
-//		{
-//			for (int i : triangleIndices)
-//			{
-//				float t, u, v;
-//				if (triangles[i].rayIntersect(ray, t, u, v) && t < maxT)
-//					return true;
-//			}
-//			return false;
-//		}
-//
-//		if (l && l->traverseVisible(ray, triangles, maxT)) return true;
-//		if (r && r->traverseVisible(ray, triangles, maxT)) return true;
-//
-//		return false; 
-//	}
-//};
 
 
 class BVHNode
@@ -548,271 +474,3 @@ public:
 	}
 
 };
-
-
-
-//#pragma once
-//
-//#include "Core.h"
-//#include "Sampling.h"
-//
-//class Ray
-//{
-//public:
-//	Vec3 o;
-//	Vec3 dir;
-//	Vec3 invDir;
-//	Ray()
-//	{
-//	}
-//	Ray(Vec3 _o, Vec3 _d)
-//	{
-//		init(_o, _d);
-//	}
-//	void init(Vec3 _o, Vec3 _d)
-//	{
-//		o = _o;
-//		dir = _d;
-//		invDir = Vec3(1.0f / dir.x, 1.0f / dir.y, 1.0f / dir.z);
-//	}
-//	Vec3 at(const float t) const
-//	{
-//		return (o + (dir * t));
-//	}
-//};
-//
-//class Plane
-//{
-//public:
-//	Vec3 n;
-//	float d;
-//	void init(Vec3& _n, float _d)
-//	{
-//		n = _n;
-//		d = _d;
-//	}
-//	// Add code here
-//	bool rayIntersect(Ray& r, float& t)
-//	{
-//		return false;
-//	}
-//};
-//
-//#define EPSILON 0.001f
-//
-//class Triangle
-//{
-//public:
-//	Vertex vertices[3];
-//	Vec3 e1; // Edge 1
-//	Vec3 e2; // Edge 2
-//	Vec3 n; // Geometric Normal
-//	float area; // Triangle area
-//	float d; // For ray triangle if needed
-//	unsigned int materialIndex;
-//	void init(Vertex v0, Vertex v1, Vertex v2, unsigned int _materialIndex)
-//	{
-//		materialIndex = _materialIndex;
-//		vertices[0] = v0;
-//		vertices[1] = v1;
-//		vertices[2] = v2;
-//		e1 = vertices[2].p - vertices[1].p;
-//		e2 = vertices[0].p - vertices[2].p;
-//		n = e1.cross(e2).normalize();
-//		area = e1.cross(e2).length() * 0.5f;
-//		d = Dot(n, vertices[0].p);
-//	}
-//	Vec3 centre() const
-//	{
-//		return (vertices[0].p + vertices[1].p + vertices[2].p) / 3.0f;
-//	}
-//	// Add code here
-//	bool rayIntersect(const Ray& r, float& t, float& u, float& v) const
-//	{
-//		return true;
-//	}
-//	void interpolateAttributes(const float alpha, const float beta, const float gamma, Vec3& interpolatedNormal, float& interpolatedU, float& interpolatedV) const
-//	{
-//		interpolatedNormal = vertices[0].normal * alpha + vertices[1].normal * beta + vertices[2].normal * gamma;
-//		interpolatedNormal = interpolatedNormal.normalize();
-//		interpolatedU = vertices[0].u * alpha + vertices[1].u * beta + vertices[2].u * gamma;
-//		interpolatedV = vertices[0].v * alpha + vertices[1].v * beta + vertices[2].v * gamma;
-//	}
-//	// Add code here
-//	Vec3 sample(Sampler* sampler, float& pdf)
-//	{
-//		return Vec3(0, 0, 0);
-//	}
-//	Vec3 gNormal()
-//	{
-//		return (n * (Dot(vertices[0].normal, n) > 0 ? 1.0f : -1.0f));
-//	}
-//};
-//
-//class AABB
-//{
-//public:
-//	Vec3 max;
-//	Vec3 min;
-//	AABB()
-//	{
-//		reset();
-//	}
-//	void reset()
-//	{
-//		max = Vec3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-//		min = Vec3(FLT_MAX, FLT_MAX, FLT_MAX);
-//	}
-//	void extend(const Vec3 p)
-//	{
-//		max = Max(max, p);
-//		min = Min(min, p);
-//	}
-//	//// Add code here
-//	//bool rayAABB(const Ray& r, float& t)
-//	//{
-//	//	return true;
-//	//}
-//	//// Add code here
-//	//bool rayAABB(const Ray& r)
-//	//{
-//	//	return true;
-//	//}
-//	// 
-//	bool rayAABB(const Ray& r, float& t) {
-//		float tMin, tMax;
-//		bool hit = rayIntersect(r, tMin, tMax);
-//		t = tMin;
-//		return hit;
-//	}
-//
-//	bool rayAABB(const Ray& r) {
-//		float tMin, tMax;
-//		return rayIntersect(r, tMin, tMax);
-//	}
-//
-//
-//	// Add code here
-//
-//	bool rayIntersect(const Ray& ray, float& tMin, float& tMax) const {
-//		tMin = 0.0f;
-//		tMax = FLT_MAX;
-//
-//		for (int i = 0; i < 3; ++i) {
-//			float invD = 1.0f / ray.dir[i];
-//			float t0 = (min[i] - ray.o[i]) * invD;
-//			float t1 = (max[i] - ray.o[i]) * invD;
-//
-//			if (invD < 0.0f)
-//				std::swap(t0, t1);
-//
-//			tMin = std::max(tMin, t0);
-//			tMax = std::min(tMax, t1);
-//
-//			if (tMax < tMin)
-//				return false;
-//		}
-//		return true;
-//	}
-//
-//	float area()
-//	{
-//		Vec3 size = max - min;
-//		return ((size.x * size.y) + (size.y * size.z) + (size.x * size.z)) * 2.0f;
-//	}
-//
-//	//float area()
-//	//{
-//	//	Vec3 size = max - min;
-//	//	return ((size.x * size.y) + (size.y * size.z) + (size.x * size.z)) * 2.0f;
-//	//}
-//	//	bool rayIntersect(const Ray& ray, float& tMin, float& tMax) const {
-//	//	tMin = 0.0f;
-//	//	tMax = FLT_MAX;
-//
-//	//	for (int i = 0; i < 3; ++i) {
-//	//		float invD = 1.0f / ray.dir[i];
-//	//		float t0 = (min[i] - ray.origin[i]) * invD;
-//	//		float t1 = (max[i] - ray.origin[i]) * invD;
-//
-//	//		if (invD < 0.0f)
-//	//			std::swap(t0, t1);
-//
-//	//		tMin = std::max(tMin, t0);
-//	//		tMax = std::min(tMax, t1);
-//
-//	//		if (tMax < tMin)
-//	//			return false;
-//	//	}
-//	//	return true;
-//	//}
-//};
-//
-//class Sphere
-//{
-//public:
-//	Vec3 centre;
-//	float radius;
-//	void init(Vec3& _centre, float _radius)
-//	{
-//		centre = _centre;
-//		radius = _radius;
-//	}
-//	// Add code here
-//	bool rayIntersect(Ray& r, float& t)
-//	{
-//		return false;
-//	}
-//};
-//
-//struct IntersectionData
-//{
-//	unsigned int ID;
-//	float t;
-//	float alpha;
-//	float beta;
-//	float gamma;
-//};
-//
-//#define MAXNODE_TRIANGLES 8
-//#define TRAVERSE_COST 1.0f
-//#define TRIANGLE_COST 2.0f
-//#define BUILD_BINS 32
-//
-//class BVHNode
-//{
-//public:
-//	AABB bounds;
-//	BVHNode* r;
-//	BVHNode* l;
-//	// This can store an offset and number of triangles in a global triangle list for example
-//	// But you can store this however you want!
-//	// unsigned int offset;
-//	// unsigned char num;
-//	BVHNode()
-//	{
-//		r = NULL;
-//		l = NULL;
-//	}
-//	// Note there are several options for how to implement the build method. Update this as required
-//	void build(std::vector<Triangle>& inputTriangles)
-//	{
-//		// Add BVH building code here
-//	}
-//	void traverse(const Ray& ray, const std::vector<Triangle>& triangles, IntersectionData& intersection)
-//	{
-//		// Add BVH Traversal code here
-//	}
-//	IntersectionData traverse(const Ray& ray, const std::vector<Triangle>& triangles)
-//	{
-//		IntersectionData intersection;
-//		intersection.t = FLT_MAX;
-//		traverse(ray, triangles, intersection);
-//		return intersection;
-//	}
-//	bool traverseVisible(const Ray& ray, const std::vector<Triangle>& triangles, const float maxT)
-//	{
-//		// Add visibility code here
-//		return true;
-//	}
-//};
