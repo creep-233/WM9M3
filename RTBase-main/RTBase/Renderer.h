@@ -159,15 +159,46 @@ public:
 			{
 				return direct;
 			}
-			Colour bsdf;
+			//Colour bsdf;
+			//float pdf;
+			//Vec3 wi = SamplingDistributions::cosineSampleHemisphere(sampler->next(), sampler->next());
+			//pdf = SamplingDistributions::cosineHemispherePDF(wi);
+			//wi = shadingData.frame.toWorld(wi);
+			//bsdf = shadingData.bsdf->evaluate(shadingData, wi);
+			//pathThroughput = pathThroughput * bsdf * fabsf(Dot(wi, shadingData.sNormal)) / pdf;
+			//r.init(shadingData.x + (wi * EPSILON), wi);
+			//return (direct + pathTrace(r, pathThroughput, depth + 1, sampler, shadingData.bsdf->isPureSpecular()));
+
 			float pdf;
-			Vec3 wi = SamplingDistributions::cosineSampleHemisphere(sampler->next(), sampler->next());
-			pdf = SamplingDistributions::cosineHemispherePDF(wi);
-			wi = shadingData.frame.toWorld(wi);
-			bsdf = shadingData.bsdf->evaluate(shadingData, wi);
-			pathThroughput = pathThroughput * bsdf * fabsf(Dot(wi, shadingData.sNormal)) / pdf;
-			r.init(shadingData.x + (wi * EPSILON), wi);
-			return (direct + pathTrace(r, pathThroughput, depth + 1, sampler, shadingData.bsdf->isPureSpecular()));
+			Colour bsdf;
+			Vec3 wi;
+
+			// 对于 specular 材质，必须调用 sample
+			if (shadingData.bsdf->isPureSpecular())
+			{
+				wi = shadingData.bsdf->sample(shadingData, sampler, bsdf, pdf);
+				if (pdf <= 0.0f || bsdf.Lum() <= 0.0f)
+					return direct;
+
+				pathThroughput = pathThroughput * bsdf;
+				r.init(shadingData.x + wi * EPSILON, wi);
+				return pathTrace(r, pathThroughput, depth + 1, sampler, true);
+			}
+			else
+			{
+				// 继续原有的 cosineSampleHemisphere 路径
+				wi = SamplingDistributions::cosineSampleHemisphere(sampler->next(), sampler->next());
+				pdf = SamplingDistributions::cosineHemispherePDF(wi);
+				wi = shadingData.frame.toWorld(wi);
+				bsdf = shadingData.bsdf->evaluate(shadingData, wi);
+				if (pdf <= 0.0f || bsdf.Lum() <= 0.0f)
+					return direct;
+
+				pathThroughput = pathThroughput * bsdf * fabsf(Dot(wi, shadingData.sNormal)) / pdf;
+				r.init(shadingData.x + (wi * EPSILON), wi);
+				return direct + pathTrace(r, pathThroughput, depth + 1, sampler, false);
+			}
+
 		}
 		return scene->background->evaluate(r.dir);
 	}
@@ -266,7 +297,12 @@ public:
 					for (; s < maxSamples; ++s)
 					{
 						Ray ray = scene->camera.generateRay(px, py);
-						Colour sample = direct(ray, &samplers[threadId]);
+
+						//RayTracing
+						//Colour sample = direct(ray, &samplers[threadId]);
+						//PathTracing
+						Colour pathThroughput(1.0f, 1.0f, 1.0f);
+						Colour sample = pathTrace(ray, pathThroughput, 0, &samplers[threadId]);
 
 						accum = accum + sample;
 						float lum = sample.Lum();

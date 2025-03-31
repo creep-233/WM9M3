@@ -30,6 +30,13 @@ public:
 	}
 };
 
+template<typename T>
+static T clamp(T x, T a, T b)
+{
+	return x < a ? a : (x > b ? b : x);
+}
+
+
 class ShadingHelper
 {
 public:
@@ -217,19 +224,31 @@ public:
 		//wi = shadingData.frame.toWorld(wi);
 		//return wi;
 
-		Vec3 woLocal = shadingData.frame.toLocal(shadingData.wo); // 出射方向
-		Vec3 wiLocal = Vec3(-woLocal.x, -woLocal.y, woLocal.z);   // 理想镜面反射（z 轴法线）
+		// 将 wo 转换为局部空间
+		Vec3 woLocal = shadingData.frame.toLocal(shadingData.wo);
 
-		// 如果反射方向在表面下方（理论上不会发生，但可以加保险）
-		if (wiLocal.z <= 0.0f) {
+		// 理想镜面反射方向：反转 x/y 分量，保留 z 分量
+		Vec3 wiLocal = Vec3(-woLocal.x, -woLocal.y, woLocal.z);
+
+		// 如果反射方向在表面下方，说明无效
+		if (wiLocal.z <= 0.0f)
+		{
 			pdf = 0.0f;
-			reflectedColour = Colour(0.0f, 0.0f, 0.0f);
-			return Vec3(0.0f, 0.0f, 0.0f);
+			reflectedColour = Colour(0, 0, 0);
+			return Vec3(0, 0, 0);
 		}
 
-		pdf = 1.0f; // delta 分布，不是连续分布
-		reflectedColour = albedo->sample(shadingData.tu, shadingData.tv);
-		return shadingData.frame.toWorld(wiLocal);
+		// 转换回世界空间
+		Vec3 wiWorld = shadingData.frame.toWorld(wiLocal);
+
+		// cos(θ) = dot(wi, n)
+		float cosTheta = std::max(Dot(wiWorld, shadingData.sNormal), 0.0f);
+
+		// Delta 分布 -> 只在理想反射方向有能量，颜色除以 cosθ 以保证能量守恒
+		reflectedColour = albedo->sample(shadingData.tu, shadingData.tv) / cosTheta;
+		pdf = 1.0f;  // 实际上是 delta，不用于采样 pdf 权重，配合 evaluate = 0.0f
+
+		return wiWorld;
 
 	}
 	Colour evaluate(const ShadingData& shadingData, const Vec3& wi)
@@ -393,12 +412,55 @@ public:
 	}
 	Vec3 sample(const ShadingData& shadingData, Sampler* sampler, Colour& reflectedColour, float& pdf)
 	{
+		//Vec3 woLocal = shadingData.frame.toLocal(shadingData.wo);
+		//if (woLocal.z == 0.0f) {
+		//	pdf = 0.0f;
+		//	reflectedColour = Colour(0.0f, 0.0f, 0.0f);
+		//	return Vec3(0.0f,0.0f,0.0f);
+		//}
+
+		//float etaI = extIOR;
+		//float etaT = intIOR;
+		//bool entering = woLocal.z > 0.0f;
+		//if (!entering) std::swap(etaI, etaT);
+
+		//float eta = etaI / etaT;
+		//float cosThetaI = fabsf(woLocal.z);
+		//float sin2ThetaT = eta * eta * (1.0f - cosThetaI * cosThetaI);
+
+		//// Total internal reflection
+		//if (sin2ThetaT >= 1.0f) {
+		//	Vec3 wiLocal = Vec3(-woLocal.x, -woLocal.y, woLocal.z);
+		//	reflectedColour = albedo->sample(shadingData.tu, shadingData.tv);
+		//	pdf = 1.0f;
+		//	return shadingData.frame.toWorld(wiLocal);
+		//}
+
+		//float cosThetaT = sqrtf(std::max(0.0f, 1.0f - sin2ThetaT));
+		//float Fr = ShadingHelper::fresnelDielectric(cosThetaI, intIOR, extIOR);
+
+		//// Russian roulette: decide reflection or refraction
+		//if (sampler->next() < Fr) {
+		//	// Reflect
+		//	Vec3 wiLocal = Vec3(-woLocal.x, -woLocal.y, woLocal.z);
+		//	reflectedColour = albedo->sample(shadingData.tu, shadingData.tv) * Fr;
+		//	pdf = Fr;
+		//	return shadingData.frame.toWorld(wiLocal);
+		//}
+		//else {
+		//	// Refract
+		//	Vec3 wiLocal;
+		//	float sign = entering ? 1.0f : -1.0f;
+		//	wiLocal.x = -woLocal.x * eta;
+		//	wiLocal.y = -woLocal.y * eta;
+		//	wiLocal.z = sign * cosThetaT;
+
+		//	reflectedColour = albedo->sample(shadingData.tu, shadingData.tv) * (1.0f - Fr);
+		//	pdf = 1.0f - Fr;
+		//	return shadingData.frame.toWorld(wiLocal);
+		//}
+
 		Vec3 woLocal = shadingData.frame.toLocal(shadingData.wo);
-		if (woLocal.z == 0.0f) {
-			pdf = 0.0f;
-			reflectedColour = Colour(0.0f, 0.0f, 0.0f);
-			return Vec3(0.0f,0.0f,0.0f);
-		}
 
 		float etaI = extIOR;
 		float etaT = intIOR;
@@ -410,37 +472,38 @@ public:
 		float sin2ThetaT = eta * eta * (1.0f - cosThetaI * cosThetaI);
 
 		// Total internal reflection
-		if (sin2ThetaT >= 1.0f) {
+		if (sin2ThetaT >= 1.0f)
+		{
 			Vec3 wiLocal = Vec3(-woLocal.x, -woLocal.y, woLocal.z);
-			reflectedColour = albedo->sample(shadingData.tu, shadingData.tv);
+			reflectedColour = Colour(1.0f, 1.0f, 1.0f);
 			pdf = 1.0f;
 			return shadingData.frame.toWorld(wiLocal);
 		}
 
-		float cosThetaT = sqrtf(std::max(0.0f, 1.0f - sin2ThetaT));
-		float Fr = ShadingHelper::fresnelDielectric(cosThetaI, intIOR, extIOR);
+		float cosThetaT = sqrtf(1.0f - sin2ThetaT);
+		float Fr = ShadingHelper::fresnelDielectric(cosThetaI, etaI, etaT);
 
-		// Russian roulette: decide reflection or refraction
-		if (sampler->next() < Fr) {
-			// Reflect
+		if (sampler->next() < Fr)
+		{
 			Vec3 wiLocal = Vec3(-woLocal.x, -woLocal.y, woLocal.z);
-			reflectedColour = albedo->sample(shadingData.tu, shadingData.tv) * Fr;
+			reflectedColour = Colour(Fr, Fr, Fr);
 			pdf = Fr;
 			return shadingData.frame.toWorld(wiLocal);
 		}
-		else {
-			// Refract
+		else
+		{
 			Vec3 wiLocal;
-			float sign = entering ? 1.0f : -1.0f;
+			float sign = entering ? -1.0f : 1.0f;
 			wiLocal.x = -woLocal.x * eta;
 			wiLocal.y = -woLocal.y * eta;
 			wiLocal.z = sign * cosThetaT;
 
-			reflectedColour = albedo->sample(shadingData.tu, shadingData.tv) * (1.0f - Fr);
+			// 能量缩放项
+			float scale = (eta * eta);
+			reflectedColour = Colour(scale * (1.0f - Fr), scale * (1.0f - Fr), scale * (1.0f - Fr));
 			pdf = 1.0f - Fr;
 			return shadingData.frame.toWorld(wiLocal);
 		}
-
 	}
 	Colour evaluate(const ShadingData& shadingData, const Vec3& wi)
 	{
@@ -492,7 +555,7 @@ public:
 		//reflectedColour = albedo->sample(shadingData.tu, shadingData.tv) / M_PI;
 		//wi = shadingData.frame.toWorld(wi);
 		//return wi;
-		Vec3 wo = shadingData.frame.toLocal(shadingData.wo);  // 出射方向
+		Vec3 wo = shadingData.frame.toLocal(shadingData.wo);
 		bool entering = wo.z > 0.0f;
 
 		float etaI = entering ? extIOR : intIOR;
@@ -500,40 +563,37 @@ public:
 		float eta = etaI / etaT;
 
 		// 法线方向
-		Vec3 n = Vec3(0.0f, 0.0f, 1.0f);
+		Vec3 n(0.0f, 0.0f, 1.0f);
 		if (!entering) n = -n;
 
-		// 计算 cosθ
-		float cosTheta = Dot(wo, n);
-		cosTheta = ShadingHelper::clamp(cosTheta, -1.0f, 1.0f);
+		float cosThetaI = Dot(wo, n);
+		cosThetaI = clamp(cosThetaI, -1.0f, 1.0f);
 
-		// Fresnel 反射率
-		float Fr = ShadingHelper::fresnelDielectric(cosTheta, intIOR, extIOR);
+		// 判断是否发生全反射
+		float sin2ThetaT = eta * eta * (1.0f - cosThetaI * cosThetaI);
+		if (sin2ThetaT >= 1.0f) {
+			// 全内反射：只能反射
+			Vec3 wi = Reflect(wo, n);
+			reflectedColour = albedo->sample(shadingData.tu, shadingData.tv);
+			pdf = 1.0f;
+			return shadingData.frame.toWorld(wi);
+		}
+
+		float cosThetaT = sqrtf(std::max(0.0f, 1.0f - sin2ThetaT));
+		float Fr = ShadingHelper::fresnelDielectric(fabsf(cosThetaI), etaI, etaT);
 
 		if (sampler->next() < Fr) {
 			// 反射分支
 			Vec3 wi = Reflect(wo, n);
+			reflectedColour = albedo->sample(shadingData.tu, shadingData.tv) * Fr / fabsf(wi.z);
 			pdf = Fr;
-			reflectedColour = albedo->sample(shadingData.tu, shadingData.tv) * Fr / std::abs(wi.z);
 			return shadingData.frame.toWorld(wi);
 		}
 		else {
 			// 折射分支
-			float sin2ThetaI = std::max(0.0f, 1.0f - cosTheta * cosTheta);
-			float sin2ThetaT = eta * eta * sin2ThetaI;
-
-			if (sin2ThetaT >= 1.0f) {
-				// 全反射，作为保底
-				Vec3 wi = Reflect(wo, n);
-				pdf = 1.0f;
-				reflectedColour = albedo->sample(shadingData.tu, shadingData.tv);
-				return shadingData.frame.toWorld(wi);
-			}
-
-			float cosThetaT = sqrtf(std::max(0.0f, 1.0f - sin2ThetaT));
-			Vec3 wi = (wo * -eta + n * (eta * cosTheta - cosThetaT));
+			Vec3 wi = (-wo * eta) + n * (eta * cosThetaI - cosThetaT);
+			reflectedColour = albedo->sample(shadingData.tu, shadingData.tv) * (1.0f - Fr) / fabsf(wi.z);
 			pdf = 1.0f - Fr;
-			reflectedColour = albedo->sample(shadingData.tu, shadingData.tv) * (1.0f - Fr) / std::abs(wi.z);
 			return shadingData.frame.toWorld(wi);
 		}
 	}
