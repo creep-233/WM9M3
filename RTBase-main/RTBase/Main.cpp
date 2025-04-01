@@ -18,8 +18,8 @@ int main(int argc, char *argv[])
 	// runTests()
 	
 	// Initialize default parameters
-	std::string sceneName = "cornell-box";
-	//std::string sceneName = "Scenes1/bathroom";
+	//std::string sceneName = "cornell-box";
+	std::string sceneName = "Scenes1/bathroom";
 	//std::string sceneName = "Scenes1/bathroom2";
 	//std::string sceneName = "Scenes1/bedroom";
 	//std::string sceneName = "Scenes1/classroom";
@@ -127,6 +127,9 @@ int main(int argc, char *argv[])
 		// Time how long a render call takes
 		timer.reset();
 		rt.render();
+
+		//rt.denoiseAndSave("result_denoised.png");
+
 		float t = timer.dt();
 		// Write
 		std::cout << t << std::endl;
@@ -145,6 +148,21 @@ int main(int argc, char *argv[])
 			rt.saveHDR(filename);
 			break;
 		}
+
+		if (canvas.keyPressed('K')) {
+			rt.denoiseAndSave("result_denoised.png");
+			std::cout << "denoised";
+		}
+
+
+		if (rt.getSPP() >= SPP)
+		{
+			rt.saveHDR(filename);
+			rt.denoiseAndSave("result_denoised.png");
+			break;
+		}
+
+
 		canvas.present();
 	}
 	return 0;

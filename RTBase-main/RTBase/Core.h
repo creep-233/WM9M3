@@ -160,6 +160,10 @@ public:
 	{
 		return ((x * x) + (y * y) + (z * z));
 	}
+	float lengthSq(Vec3& other)
+	{
+		return ((x - other.x * x - other.x) + (y - other.y * y - other.y) + (z - other.z * z - other.z));
+	}
 	float length()
 	{
 		return sqrtf((x * x) + (y * y) + (z * z));

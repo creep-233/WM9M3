@@ -10,6 +10,7 @@
 #include "GamesEngineeringBase.h"
 #include <thread>
 #include <functional>
+#include <OpenImageDenoise/oidn.hpp>
 
 
 class RayTracer
@@ -21,10 +22,29 @@ public:
 	MTRandom *samplers;
 	std::thread **threads;
 	int numProcs;
+
+	// OIDN
+	float* colorBuffer;
+	float* normalBuffer;
+	float* albedoBuffer;
+	float* outputBuffer;
+
+
+
 	void init(Scene* _scene, GamesEngineeringBase::Window* _canvas)
 	{
+
 		scene = _scene;
 		canvas = _canvas;
+
+		int width = scene->camera.width;
+		int height = scene->camera.height;
+		colorBuffer = new float[width * height * 3];
+		normalBuffer = new float[width * height * 3];
+		albedoBuffer = new float[width * height * 3];
+		outputBuffer = new float[width * height * 3];
+
+
 		film = new Film();
 		film->init((unsigned int)scene->camera.width, (unsigned int)scene->camera.height, /*new BoxFilter()*/ new GaussianFilter());
 		SYSTEM_INFO sysInfo;
@@ -39,6 +59,119 @@ public:
 	{
 		film->clear();
 	}
+
+	//void denoiseAndSave(std::string filename)
+	//{
+	//	int width = scene->camera.width;
+	//	int height = scene->camera.height;
+
+	//	oidn::DeviceRef device = oidn::newDevice();
+	//	device.setErrorFunction([](void*, oidn::Error code, const char* message) {
+	//		std::cerr << "OIDN error: " << message << std::endl;
+	//		});
+	//	device.commit();
+
+
+	//	oidn::BufferRef colorBuf = device.newBuffer(width * height * 3 * sizeof(float));
+	//	oidn::BufferRef outputBuf = device.newBuffer(width * height * 3 * sizeof(float));
+
+
+	//	std::memcpy(colorBuf.getData(), colorBuffer, width * height * 3 * sizeof(float));
+
+
+	//	oidn::FilterRef filter = device.newFilter("RT");
+	//	filter.setImage("color", colorBuf, oidn::Format::Float3, width, height);
+
+	//	// oidn::BufferRef albedoBuf = device.newBuffer(...);
+	//	// filter.setImage("albedo", albedoBuf, ...);
+	//	filter.setImage("output", outputBuf, oidn::Format::Float3, width, height);
+	//	filter.set("hdr", true);
+	//	filter.commit();
+	//	filter.execute();
+
+
+	//	std::memcpy(outputBuffer, outputBuf.getData(), width * height * 3 * sizeof(float));
+
+
+	//	for (int y = 0; y < height; ++y)
+	//	{
+	//		for (int x = 0; x < width; ++x)
+	//		{
+	//			int idx = (y * width + x) * 3;
+	//			float r = outputBuffer[idx + 0];
+	//			float g = outputBuffer[idx + 1];
+	//			float b = outputBuffer[idx + 2];
+	//			unsigned char cr = (unsigned char)(min(r, 1.0f) * 255);
+	//			unsigned char cg = (unsigned char)(min(g, 1.0f) * 255);
+	//			unsigned char cb = (unsigned char)(min(b, 1.0f) * 255);
+	//			canvas->draw(x, y, cr, cg, cb);
+	//		}
+	//	}
+
+
+	//	savePNG(filename);
+	//}
+
+
+	void denoiseAndSave(std::string filename)
+	{
+		int width = scene->camera.width;
+		int height = scene->camera.height;
+
+	
+		oidn::DeviceRef device = oidn::newDevice();
+		device.setErrorFunction([](void*, oidn::Error code, const char* message) {
+			std::cerr << "OIDN error: " << message << std::endl;
+			});
+		device.commit();
+
+
+		oidn::BufferRef colorBuf = device.newBuffer(width * height * 3 * sizeof(float));
+		oidn::BufferRef albedoBuf = device.newBuffer(width * height * 3 * sizeof(float));
+		oidn::BufferRef normalBuf = device.newBuffer(width * height * 3 * sizeof(float));
+		oidn::BufferRef outputBuf = device.newBuffer(width * height * 3 * sizeof(float));
+
+
+		std::memcpy(colorBuf.getData(), colorBuffer, width * height * 3 * sizeof(float));
+		std::memcpy(albedoBuf.getData(), albedoBuffer, width * height * 3 * sizeof(float));
+		std::memcpy(normalBuf.getData(), normalBuffer, width * height * 3 * sizeof(float));
+
+	
+		oidn::FilterRef filter = device.newFilter("RT");
+		filter.setImage("color", colorBuf, oidn::Format::Float3, width, height);
+		filter.setImage("albedo", albedoBuf, oidn::Format::Float3, width, height);
+		filter.setImage("normal", normalBuf, oidn::Format::Float3, width, height);
+		filter.setImage("output", outputBuf, oidn::Format::Float3, width, height);
+		filter.set("hdr", true);
+		filter.commit();
+
+
+		filter.execute();
+
+
+		std::memcpy(outputBuffer, outputBuf.getData(), width * height * 3 * sizeof(float));
+
+	
+		for (int y = 0; y < height; ++y)
+		{
+			for (int x = 0; x < width; ++x)
+			{
+				int idx = (y * width + x) * 3;
+				float r = outputBuffer[idx + 0];
+				float g = outputBuffer[idx + 1];
+				float b = outputBuffer[idx + 2];
+
+
+				unsigned char cr = (unsigned char)(min(r, 1.0f) * 255.0f);
+				unsigned char cg = (unsigned char)(min(g, 1.0f) * 255.0f);
+				unsigned char cb = (unsigned char)(min(b, 1.0f) * 255.0f);
+				canvas->draw(x, y, cr, cg, cb);
+			}
+		}
+
+		savePNG(filename);
+	}
+
 
 
 
@@ -339,10 +472,10 @@ public:
 						Ray ray = scene->camera.generateRay(px, py);
 
 						//RayTracing
-						Colour sample = direct(ray, &samplers[threadId]);
+						//Colour sample = direct(ray, &samplers[threadId]);i
 						//PathTracing
-						//Colour pathThroughput(1.0f, 1.0f, 1.0f);
-						//Colour sample = pathTrace(ray, pathThroughput, 0, &samplers[threadId]);
+						Colour pathThroughput(1.0f, 1.0f, 1.0f);
+						Colour sample = pathTrace(ray, pathThroughput, 0, &samplers[threadId]);
 
 						accum = accum + sample;
 						float lum = sample.Lum();
@@ -359,6 +492,28 @@ public:
 					}
 
 					Colour final = accum / float(s + 1);
+
+					int idx = (y * film->width + x) * 3;
+
+
+					colorBuffer[idx + 0] = final.r;
+					colorBuffer[idx + 1] = final.g;
+					colorBuffer[idx + 2] = final.b;
+
+
+					Ray ray = scene->camera.generateRay(px, py);
+					Colour normal = viewNormals(ray);
+					normalBuffer[idx + 0] = normal.r;
+					normalBuffer[idx + 1] = normal.g;
+					normalBuffer[idx + 2] = normal.b;
+
+
+					Colour albedoVal = albedo(ray);
+					albedoBuffer[idx + 0] = albedoVal.r;
+					albedoBuffer[idx + 1] = albedoVal.g;
+					albedoBuffer[idx + 2] = albedoVal.b;
+
+
 					film->splat(px, py, final);
 					if (final.Lum() < 1e-4f) {
 
