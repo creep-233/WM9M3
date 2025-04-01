@@ -156,15 +156,15 @@ public:
 class GaussianFilter : public ImageFilter {
 public:
 	float filter(float x, float y) const override {
-		const float alpha = 1.0f;  // 固定的衰减因子
-		const float radius = 2.0f; // 固定的影响半径
+		const float alpha = 1.0f;  
+		const float radius = 2.0f; 
 
-		float d2 = x * x + y * y;  // 计算 d²
+		float d2 = x * x + y * y;  
 		return exp(-alpha * d2) - exp(-alpha * radius * radius);
 	}
 
 	int size() const override {
-		return 1;  // 设定影响半径为 1
+		return 1;  
 	}
 
 };

@@ -11,7 +11,6 @@
 #include <thread>
 #include <functional>
 
-const int MAX_DEPTH = 5;
 
 class RayTracer
 {
@@ -34,6 +33,7 @@ public:
 		threads = new std::thread*[numProcs];
 		samplers = new MTRandom[numProcs];
 		clear();
+		scene->traceVPLs(&samplers[0], 1000);
 	}
 	void clear()
 	{
@@ -127,6 +127,37 @@ public:
 
 
 
+	Colour computeDirectFromVPLs(ShadingData shadingData)
+	{
+		if (shadingData.bsdf->isPureSpecular())
+			return Colour(0.0f, 0.0f, 0.0f);
+
+		Colour result = Colour(0.0f, 0.0f, 0.0f);
+
+		for (const Scene::VPL& vpl : scene->vpls)
+		{
+			Vec3 wi = vpl.shadingData.x - shadingData.x;
+			float d2 = wi.lengthSq();
+			wi = wi.normalize();
+
+			float cosCamera = max(Dot(wi, shadingData.sNormal), 0.0f);
+			float cosVPL = max(Dot(-wi, vpl.shadingData.sNormal), 0.0f);
+			float G = cosCamera * cosVPL / (d2 + EPSILON);
+			if (G <= 0.0f) continue;
+
+			if (!scene->visible(shadingData.x, vpl.shadingData.x))
+				continue;
+
+			Colour f1 = shadingData.bsdf->evaluate(shadingData, wi);
+			Colour f2 = vpl.shadingData.bsdf->evaluate(vpl.shadingData, -wi);
+
+			result = result + vpl.Le * f1 * f2 * G;
+		}
+
+		return result;
+	}
+
+
 
 	Colour pathTrace(Ray& r, Colour& pathThroughput, int depth, Sampler* sampler, bool canHitLight = true)
 	{
@@ -145,7 +176,10 @@ public:
 					return Colour(0.0f, 0.0f, 0.0f);
 				}
 			}
+
 			Colour direct = pathThroughput * computeDirect(shadingData, sampler);
+			//Colour direct = pathThroughput * computeDirectFromVPLs(shadingData);
+
 			if (depth > MAX_DEPTH)
 			{
 				return direct;
@@ -173,7 +207,7 @@ public:
 			Colour bsdf;
 			Vec3 wi;
 
-			// 对于 specular 材质，必须调用 sample
+
 			if (shadingData.bsdf->isPureSpecular())
 			{
 				wi = shadingData.bsdf->sample(shadingData, sampler, bsdf, pdf);
@@ -186,7 +220,7 @@ public:
 			}
 			else
 			{
-				// 继续原有的 cosineSampleHemisphere 路径
+
 				wi = SamplingDistributions::cosineSampleHemisphere(sampler->next(), sampler->next());
 				pdf = SamplingDistributions::cosineHemispherePDF(wi);
 				wi = shadingData.frame.toWorld(wi);
@@ -213,6 +247,8 @@ public:
 				return shadingData.bsdf->emit(shadingData, shadingData.wo);
 			}
 			return computeDirect(shadingData, sampler);
+			//return computeDirectFromVPLs(shadingData);
+
 		}
 		return Colour(0.0f, 0.0f, 0.0f);
 	}
@@ -252,6 +288,8 @@ public:
 	void render()
 	{
 		film->incrementSPP();
+
+		//scene->traceVPLs(&samplers[0], 1000);
 
 	//	auto renderBlock = [&](int threadId, int yStart, int yEnd) {
 	//		for (int y = yStart; y < yEnd; ++y)
@@ -301,10 +339,10 @@ public:
 						Ray ray = scene->camera.generateRay(px, py);
 
 						//RayTracing
-						//Colour sample = direct(ray, &samplers[threadId]);
+						Colour sample = direct(ray, &samplers[threadId]);
 						//PathTracing
-						Colour pathThroughput(1.0f, 1.0f, 1.0f);
-						Colour sample = pathTrace(ray, pathThroughput, 0, &samplers[threadId]);
+						//Colour pathThroughput(1.0f, 1.0f, 1.0f);
+						//Colour sample = pathTrace(ray, pathThroughput, 0, &samplers[threadId]);
 
 						accum = accum + sample;
 						float lum = sample.Lum();
@@ -323,8 +361,8 @@ public:
 					Colour final = accum / float(s + 1);
 					film->splat(px, py, final);
 					if (final.Lum() < 1e-4f) {
-						// 可以标记黑色点
-						final = Colour(1.0f, 0.0f, 1.0f); // 粉色警告色
+
+						final = Colour(1.0f, 0.0f, 1.0f); 
 					}
 
 

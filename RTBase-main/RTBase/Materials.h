@@ -311,52 +311,52 @@ public:
 		//wi = shadingData.frame.toWorld(wi);
 		//return wi;
 
+
+		// Convert wo to local space
+		Vec3 wo = shadingData.frame.toLocal(shadingData.wo);
+		if (wo.z <= 0.0f)
 		{
-			// Convert wo to local space
-			Vec3 wo = shadingData.frame.toLocal(shadingData.wo);
-			if (wo.z <= 0.0f)
-			{
-				pdf = 0.0f;
-				reflectedColour = Colour(0.0f, 0.0f, 0.0f);
-				return Vec3(0.0f, 0.0f, 0.0f);
-			}
-
-			// Sample microfacet normal h using GGX distribution
-			Vec3 h = SamplingDistributions::GGXSample(alpha, sampler->next(), sampler->next());
-			if (Dot(wo, h) <= 0.0f)
-			{
-				pdf = 0.0f;
-				reflectedColour = Colour(0.0f, 0.0f, 0.0f);
-				return Vec3(0.0f, 0.0f, 0.0f);
-			}
-
-			// Reflect wo about h to get wi
-			Vec3 wi = Reflect(wo, h);
-			if (wi.z <= 0.0f)
-			{
-				pdf = 0.0f;
-				reflectedColour = Colour(0.0f, 0.0f, 0.0f);
-				return Vec3(0.0f, 0.0f, 0.0f);
-			}
-
-			// Compute components
-			Colour F = ShadingHelper::fresnelConductor(Dot(wi, h), eta, k);
-			float D = ShadingHelper::Dggx(h, alpha);
-			float G = ShadingHelper::Gggx(wi, wo, alpha);
-			float denom = 4.0f * wo.z * wi.z;
-
-			// Final reflected BSDF
-			Colour f = albedo->sample(shadingData.tu, shadingData.tv) * F * D * G / denom;
-
-			// PDF: GGX sampling PDF
-			float Jh = 1.0f / (4.0f * Dot(wo, h)); // Jacobian
-			float D_pdf = D * h.z / (4.0f * Dot(wo, h)); // half-vector sampling pdf
-			pdf = D_pdf;
-
-			reflectedColour = f;
-
-			return shadingData.frame.toWorld(wi);
+			pdf = 0.0f;
+			reflectedColour = Colour(0.0f, 0.0f, 0.0f);
+			return Vec3(0.0f, 0.0f, 0.0f);
 		}
+
+		// Sample microfacet normal h using GGX distribution
+		Vec3 h = SamplingDistributions::GGXSample(alpha, sampler->next(), sampler->next());
+		if (Dot(wo, h) <= 0.0f)
+		{
+			pdf = 0.0f;
+			reflectedColour = Colour(0.0f, 0.0f, 0.0f);
+			return Vec3(0.0f, 0.0f, 0.0f);
+		}
+
+		// Reflect wo about h to get wi
+		Vec3 wi = Reflect(wo, h);
+		if (wi.z <= 0.0f)
+		{
+			pdf = 0.0f;
+			reflectedColour = Colour(0.0f, 0.0f, 0.0f);
+			return Vec3(0.0f, 0.0f, 0.0f);
+		}
+
+		// Compute components
+		Colour F = ShadingHelper::fresnelConductor(Dot(wi, h), eta, k);
+		float D = ShadingHelper::Dggx(h, alpha);
+		float G = ShadingHelper::Gggx(wi, wo, alpha);
+		float denom = 4.0f * wo.z * wi.z;
+
+		// Final reflected BSDF
+		Colour f = albedo->sample(shadingData.tu, shadingData.tv) * F * D * G / denom;
+
+		// PDF: GGX sampling PDF
+		float Jh = 1.0f / (4.0f * Dot(wo, h)); // Jacobian
+		float D_pdf = D * h.z / (4.0f * Dot(wo, h)); // half-vector sampling pdf
+		pdf = D_pdf;
+
+		reflectedColour = f;
+
+		return shadingData.frame.toWorld(wi);
+		
 	}
 	Colour evaluate(const ShadingData& shadingData, const Vec3& wi)
 	{
@@ -570,17 +570,17 @@ public:
 		float etaT = entering ? intIOR : extIOR;
 		float eta = etaI / etaT;
 
-		// 法线方向
+
 		Vec3 n(0.0f, 0.0f, 1.0f);
 		if (!entering) n = -n;
 
 		float cosThetaI = Dot(wo, n);
 		cosThetaI = clamp(cosThetaI, -1.0f, 1.0f);
 
-		// 判断是否发生全反射
+
 		float sin2ThetaT = eta * eta * (1.0f - cosThetaI * cosThetaI);
 		if (sin2ThetaT >= 1.0f) {
-			// 全内反射：只能反射
+
 			Vec3 wi = Reflect(wo, n);
 			reflectedColour = albedo->sample(shadingData.tu, shadingData.tv);
 			pdf = 1.0f;
@@ -591,14 +591,14 @@ public:
 		float Fr = ShadingHelper::fresnelDielectric(fabsf(cosThetaI), etaI, etaT);
 
 		if (sampler->next() < Fr) {
-			// 反射分支
+			// Branch of reflection
 			Vec3 wi = Reflect(wo, n);
 			reflectedColour = albedo->sample(shadingData.tu, shadingData.tv) * Fr / fabsf(wi.z);
 			pdf = Fr;
 			return shadingData.frame.toWorld(wi);
 		}
 		else {
-			// 折射分支
+			// Branch of refraction
 			Vec3 wi = (-wo * eta) + n * (eta * cosThetaI - cosThetaT);
 			reflectedColour = albedo->sample(shadingData.tu, shadingData.tv) * (1.0f - Fr) / fabsf(wi.z);
 			pdf = 1.0f - Fr;

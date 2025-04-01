@@ -18,8 +18,8 @@ int main(int argc, char *argv[])
 	// runTests()
 	
 	// Initialize default parameters
-	//std::string sceneName = "cornell-box";
-	std::string sceneName = "Scenes1/bathroom";
+	std::string sceneName = "cornell-box";
+	//std::string sceneName = "Scenes1/bathroom";
 	//std::string sceneName = "Scenes1/bathroom2";
 	//std::string sceneName = "Scenes1/bedroom";
 	//std::string sceneName = "Scenes1/classroom";
