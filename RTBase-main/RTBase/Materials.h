@@ -79,23 +79,31 @@ public:
 		// Add code here
 		//return Colour(1.0f, 1.0f, 1.0f);
 
-		cosTheta = ShadingHelper::clamp(cosTheta, 0.0f, 1.0f);
-		Colour cos2 = Colour(cosTheta * cosTheta, cosTheta * cosTheta, cosTheta * cosTheta);
-		Colour sin2 = Colour(1.0f, 1.0f, 1.0f) - cos2;
+	// Clamp cosTheta to [0, 1]
+		cosTheta = clamp(cosTheta, 0.0f, 1.0f);
+		float cosTheta2 = cosTheta * cosTheta;
+		float sinTheta2 = 1.0f - cosTheta2;
 
-		Colour ior2 = ior * ior;
+		Colour eta2 = ior * ior;
 		Colour k2 = k * k;
 
-		Colour t0 = ior2 - k2 - sin2;
-		Colour a2plusb2 = sqrt(t0 * t0 + ior2 * k2 * 4.0f);
-		Colour t1 = a2plusb2 + cos2;
-		Colour t2 = Colour(2.0f * cosTheta, 2.0f * cosTheta, 2.0f * cosTheta) * sqrt(a2plusb2);
+		// common terms
+		Colour twoEtaCosTheta = ior * (2.0f * cosTheta);
 
-		Colour Rs = (t1 - t2) / (t1 + t2);
-		Colour Rp = Rs;
+		// F_parallel²
+		Colour t0 = eta2 + k2;
+		Colour t1 = t0 * cosTheta2;
+		Colour t2 = twoEtaCosTheta;
+		Colour F_parallel2_num = t1 - t2 + Colour(sinTheta2, sinTheta2, sinTheta2);
+		Colour F_parallel2_den = t1 + t2 + Colour(sinTheta2, sinTheta2, sinTheta2);
+		Colour F_parallel2 = F_parallel2_num / F_parallel2_den;
 
-		return (Rs + Rp) * 0.5f;
+		// F_perpendicular²
+		Colour F_perpendicular2_num = t0 - twoEtaCosTheta + Colour(cosTheta2, cosTheta2, cosTheta2);
+		Colour F_perpendicular2_den = t0 + twoEtaCosTheta + Colour(cosTheta2, cosTheta2, cosTheta2);
+		Colour F_perpendicular2 = F_perpendicular2_num / F_perpendicular2_den;
 
+		return (F_parallel2 + F_perpendicular2) * 0.5f;
 	}
 	static float lambdaGGX(Vec3 wi, float alpha)
 	{
