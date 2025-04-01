@@ -20,25 +20,29 @@ public:
 	float width = 0;
 	float height = 0;
 	Vec3 origin;
+
+	float Afilm;
+	Vec3 viewDirection;
+
 	void init(Matrix ProjectionMatrix, int screenwidth, int screenheight)
 	{
 		projectionMatrix = ProjectionMatrix;
 		inverseProjectionMatrix = ProjectionMatrix.invert();
 		width = (float)screenwidth;
 		height = (float)screenheight;
+
+		Afilm = width * height;
 	}
 	void updateView(Matrix V)
 	{
 		camera = V;
 		cameraToView = V.invert();
 		origin = camera.mulPoint(Vec3(0, 0, 0));
+
+		viewDirection = camera.mulVec(Vec3(0, 0, -1)).normalize();
 	}
 	// Add code here
-	//Ray generateRay(float x, float y)
-	//{
-	//	Vec3 dir(0, 0, 1);
-	//	return Ray(origin, dir);
-	//}
+
 	Ray generateRay(float x, float y)
 	{
 		
@@ -74,6 +78,9 @@ public:
 		y = y * height;
 		return true;
 	}
+
+
+
 };
 
 class Scene

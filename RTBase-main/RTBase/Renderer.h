@@ -60,58 +60,6 @@ public:
 		film->clear();
 	}
 
-	//void denoiseAndSave(std::string filename)
-	//{
-	//	int width = scene->camera.width;
-	//	int height = scene->camera.height;
-
-	//	oidn::DeviceRef device = oidn::newDevice();
-	//	device.setErrorFunction([](void*, oidn::Error code, const char* message) {
-	//		std::cerr << "OIDN error: " << message << std::endl;
-	//		});
-	//	device.commit();
-
-
-	//	oidn::BufferRef colorBuf = device.newBuffer(width * height * 3 * sizeof(float));
-	//	oidn::BufferRef outputBuf = device.newBuffer(width * height * 3 * sizeof(float));
-
-
-	//	std::memcpy(colorBuf.getData(), colorBuffer, width * height * 3 * sizeof(float));
-
-
-	//	oidn::FilterRef filter = device.newFilter("RT");
-	//	filter.setImage("color", colorBuf, oidn::Format::Float3, width, height);
-
-	//	// oidn::BufferRef albedoBuf = device.newBuffer(...);
-	//	// filter.setImage("albedo", albedoBuf, ...);
-	//	filter.setImage("output", outputBuf, oidn::Format::Float3, width, height);
-	//	filter.set("hdr", true);
-	//	filter.commit();
-	//	filter.execute();
-
-
-	//	std::memcpy(outputBuffer, outputBuf.getData(), width * height * 3 * sizeof(float));
-
-
-	//	for (int y = 0; y < height; ++y)
-	//	{
-	//		for (int x = 0; x < width; ++x)
-	//		{
-	//			int idx = (y * width + x) * 3;
-	//			float r = outputBuffer[idx + 0];
-	//			float g = outputBuffer[idx + 1];
-	//			float b = outputBuffer[idx + 2];
-	//			unsigned char cr = (unsigned char)(min(r, 1.0f) * 255);
-	//			unsigned char cg = (unsigned char)(min(g, 1.0f) * 255);
-	//			unsigned char cb = (unsigned char)(min(b, 1.0f) * 255);
-	//			canvas->draw(x, y, cr, cg, cb);
-	//		}
-	//	}
-
-
-	//	savePNG(filename);
-	//}
-
 
 	void denoiseAndSave(std::string filename)
 	{
@@ -172,26 +120,198 @@ public:
 		savePNG(filename);
 	}
 
+	void connectToCamera(Vec3 p, Vec3 n, Colour col)
+	{
+		float px, py;
+		if (!scene->camera.projectOntoCamera(p, px, py))
+			return;
+
+		Vec3 camDir = scene->camera.viewDirection.normalize();
+		Vec3 dirToCam = (scene->camera.origin - p).normalize();
+
+		float cosTheta = Dot(camDir, dirToCam);
+		if (cosTheta <= 0.0f) return;
+
+		float geometry = 1.0f / (scene->camera.Afilm * powf(cosTheta, 4.0f));
+		Colour importance = col * geometry;
+
+		// splat onto film
+		film->splat(px, py, importance);
+	}
+
+	void lightTrace(Sampler* sampler)
+	{
+		float pmf;
+		Light* light = scene->sampleLight(sampler, pmf);
+		if (!light) return;
+
+		float pdfPos;
+		Vec3 p = light->samplePositionFromLight(sampler, pdfPos);
+		float pdfDir;
+		Vec3 wi = light->sampleDirectionFromLight(sampler, pdfDir);
+		if (pdfPos <= 0.0f || pdfDir <= 0.0f) return;
+
+		Colour Le = light->evaluate(-wi) / pdfPos;
+		Colour throughput = Le;
 
 
+		//connectToCamera(p, light->normal(p, wi), throughput);
+		ShadingData shadingData;
+		shadingData.x = p; 
+		connectToCamera(p, light->normal(shadingData, wi), throughput);
+
+	
+		Ray r(p + wi * EPSILON, wi);
+		lightTracePath(r, throughput, Le, sampler);
+	}
+
+	void lightTracePath(Ray& r, Colour pathThroughput, Colour Le, Sampler* sampler)
+	{
+		for (int depth = 0; depth < MAX_DEPTH; ++depth)
+		{
+			IntersectionData isect = scene->traverse(r);
+			if (isect.t >= FLT_MAX)
+				break;
+
+			ShadingData shadingData = scene->calculateShadingData(isect, r);
+			Vec3 nextWi;
+			Colour f;
+			float pdf;
+
+			if (!shadingData.bsdf)
+				break;
+
+	
+			connectToCamera(shadingData.x, shadingData.sNormal, pathThroughput * shadingData.bsdf->emit(shadingData, shadingData.wo));
+
+			if (shadingData.bsdf->isPureSpecular())
+			{
+				nextWi = shadingData.bsdf->sample(shadingData, sampler, f, pdf);
+			}
+			else
+			{
+				nextWi = SamplingDistributions::cosineSampleHemisphere(sampler->next(), sampler->next());
+				pdf = SamplingDistributions::cosineHemispherePDF(nextWi);
+				nextWi = shadingData.frame.toWorld(nextWi);
+				f = shadingData.bsdf->evaluate(shadingData, nextWi);
+			}
+
+			if (pdf <= 0.0f || f.Lum() <= 0.0f)
+				break;
+
+			float cosTheta = max(0.0f, Dot(nextWi, shadingData.sNormal));
+			pathThroughput = pathThroughput * f * cosTheta / pdf;
+
+			// Russian Roulette
+			float rrProb = min(0.9f, pathThroughput.Lum());
+			if (sampler->next() > rrProb)
+				break;
+			pathThroughput = pathThroughput / rrProb;
+
+			r = Ray(shadingData.x + nextWi * EPSILON, nextWi);
+		}
+	}
+
+
+
+
+	//Colour computeDirect(ShadingData shadingData, Sampler* sampler)
+	//{
+	//	if (shadingData.bsdf->isPureSpecular())
+	//		return Colour(0.0f,0.0f,0.0f);
+
+	//	Colour result = Colour(0.0f, 0.0f, 0.0f);
+
+
+	//	// Light sampling path
+
+	//	float pmf;
+	//	Light* light = scene->sampleLight(sampler, pmf);
+	//	if (light && pmf > 0.0f)
+	//	{
+	//		float lightPdf;
+	//		Colour Le;
+
+	//		Vec3 wi;
+	//		float G = 1.0f;
+
+	//		if (light->isArea())
+	//		{
+	//			Vec3 p = light->sample(shadingData, sampler, Le, lightPdf);
+	//			wi = (p - shadingData.x);
+	//			float l2 = wi.lengthSq();
+	//			wi = wi.normalize();
+	//			G = (max(Dot(wi, shadingData.sNormal), 0.0f) * max(-Dot(wi, light->normal(shadingData, wi)), 0.0f)) / (l2 + EPSILON);
+
+	//			if (G > 0.0f && scene->visible(shadingData.x, p))
+	//			{
+	//				float bsdfPdf = shadingData.bsdf->PDF(shadingData, wi);
+	//				float weight = (lightPdf * pmf) / (lightPdf * pmf + bsdfPdf + EPSILON);
+	//				Colour f = shadingData.bsdf->evaluate(shadingData, wi);
+	//				result = result + f * Le * G * weight / (lightPdf * pmf);
+	//			}
+	//		}
+	//		else
+	//		{
+	//			wi = light->sample(shadingData, sampler, Le, lightPdf); // environment
+	//			G = max(Dot(wi, shadingData.sNormal), 0.0f);
+	//			if (G > 0.0f && scene->visible(shadingData.x, shadingData.x + wi * 10000.0f))
+	//			{
+	//				float bsdfPdf = shadingData.bsdf->PDF(shadingData, wi);
+	//				float weight = (lightPdf * pmf) / (lightPdf * pmf + bsdfPdf + EPSILON);
+	//				Colour f = shadingData.bsdf->evaluate(shadingData, wi);
+	//				result = result + f * Le * G * weight / (lightPdf * pmf);
+	//			}
+	//		}
+	//	}
+
+
+	//	// BSDF sampling path
+
+	//	float bsdfPdf;
+	//	Colour f;
+	//	Vec3 wi_bsdf = shadingData.bsdf->sample(shadingData, sampler, f, bsdfPdf);
+
+	//	if (bsdfPdf > 0.0f)
+	//	{
+	//		Ray shadowRay(shadingData.x + shadingData.sNormal * EPSILON, wi_bsdf);
+	//		IntersectionData isect = scene->traverse(shadowRay);
+	//		if (isect.t < FLT_MAX)
+	//		{
+	//			ShadingData lightHit = scene->calculateShadingData(isect, shadowRay);
+	//			if (lightHit.bsdf && lightHit.bsdf->isLight())
+	//			{
+	//				Colour Le = lightHit.bsdf->emit(lightHit, -wi_bsdf);
+	//				float lightPdf = 0.0f;
+	//				Light* hitLight = scene->getLightFromHit(isect);
+	//				if (hitLight)
+	//					lightPdf = hitLight->PDF(shadingData, wi_bsdf);
+
+	//				float weight = bsdfPdf / (bsdfPdf + lightPdf * pmf + EPSILON);
+	//				float cosTheta = max(Dot(wi_bsdf, shadingData.sNormal), 0.0f);
+	//				Colour contrib = f * Le * cosTheta * weight / bsdfPdf;
+	//				result = result + contrib;
+	//			}
+	//		}
+	//	}
+
+	//	return result;
+	//}
 
 	Colour computeDirect(ShadingData shadingData, Sampler* sampler)
 	{
 		if (shadingData.bsdf->isPureSpecular())
-			return Colour(0.0f,0.0f,0.0f);
+			return Colour(0.0f, 0.0f, 0.0f);
 
 		Colour result = Colour(0.0f, 0.0f, 0.0f);
 
-
-		// Light sampling path
-
+		// === Light sampling path ===
 		float pmf;
 		Light* light = scene->sampleLight(sampler, pmf);
 		if (light && pmf > 0.0f)
 		{
 			float lightPdf;
 			Colour Le;
-
 			Vec3 wi;
 			float G = 1.0f;
 
@@ -206,33 +326,50 @@ public:
 				if (G > 0.0f && scene->visible(shadingData.x, p))
 				{
 					float bsdfPdf = shadingData.bsdf->PDF(shadingData, wi);
-					float weight = (lightPdf * pmf) / (lightPdf * pmf + bsdfPdf + EPSILON);
 					Colour f = shadingData.bsdf->evaluate(shadingData, wi);
-					result = result + f * Le * G * weight / (lightPdf * pmf);
+
+		
+					if (lightPdf * pmf > 1e-4f && f.Lum() > 1e-6f)
+					{
+						float weight = (lightPdf * pmf) / (lightPdf * pmf + bsdfPdf + EPSILON);
+						Colour contrib = f * Le * G * weight / (lightPdf * pmf);
+
+			
+						if (contrib.Lum() < 20.0f) 
+							result = result + contrib;
+					}
 				}
 			}
 			else
 			{
-				wi = light->sample(shadingData, sampler, Le, lightPdf); // environment
+				wi = light->sample(shadingData, sampler, Le, lightPdf); // env map
 				G = max(Dot(wi, shadingData.sNormal), 0.0f);
+
 				if (G > 0.0f && scene->visible(shadingData.x, shadingData.x + wi * 10000.0f))
 				{
 					float bsdfPdf = shadingData.bsdf->PDF(shadingData, wi);
-					float weight = (lightPdf * pmf) / (lightPdf * pmf + bsdfPdf + EPSILON);
 					Colour f = shadingData.bsdf->evaluate(shadingData, wi);
-					result = result + f * Le * G * weight / (lightPdf * pmf);
+
+				
+					if (lightPdf * pmf > 1e-4f && f.Lum() > 1e-6f)
+					{
+						float weight = (lightPdf * pmf) / (lightPdf * pmf + bsdfPdf + EPSILON);
+						Colour contrib = f * Le * G * weight / (lightPdf * pmf);
+
+				
+						if (contrib.Lum() < 20.0f)
+							result = result + contrib;
+					}
 				}
 			}
 		}
 
-
-		// BSDF sampling path
-
+		// === BSDF sampling path ===
 		float bsdfPdf;
 		Colour f;
 		Vec3 wi_bsdf = shadingData.bsdf->sample(shadingData, sampler, f, bsdfPdf);
 
-		if (bsdfPdf > 0.0f)
+		if (bsdfPdf > 1e-4f && f.Lum() > 1e-6f)
 		{
 			Ray shadowRay(shadingData.x + shadingData.sNormal * EPSILON, wi_bsdf);
 			IntersectionData isect = scene->traverse(shadowRay);
@@ -247,10 +384,16 @@ public:
 					if (hitLight)
 						lightPdf = hitLight->PDF(shadingData, wi_bsdf);
 
-					float weight = bsdfPdf / (bsdfPdf + lightPdf * pmf + EPSILON);
-					float cosTheta = max(Dot(wi_bsdf, shadingData.sNormal), 0.0f);
-					Colour contrib = f * Le * cosTheta * weight / bsdfPdf;
-					result = result + contrib;
+					if (Le.Lum() > 1e-6f && lightPdf > 1e-4f)
+					{
+						float weight = bsdfPdf / (bsdfPdf + lightPdf * pmf + EPSILON);
+						float cosTheta = max(Dot(wi_bsdf, shadingData.sNormal), 0.0f);
+						Colour contrib = f * Le * cosTheta * weight / bsdfPdf;
+
+				
+						if (contrib.Lum() < 20.0f)
+							result = result + contrib;
+					}
 				}
 			}
 		}
@@ -361,7 +504,31 @@ public:
 				if (pdf <= 0.0f || bsdf.Lum() <= 0.0f)
 					return direct;
 
-				pathThroughput = pathThroughput * bsdf * fabsf(Dot(wi, shadingData.sNormal)) / pdf;
+				//pathThroughput = pathThroughput * bsdf * fabsf(Dot(wi, shadingData.sNormal)) / pdf;
+				float cosTheta = fabsf(Dot(wi, shadingData.sNormal));
+
+				// 护栏：下限
+				if (pdf > 1e-4f && bsdf.Lum() > 1e-6f && cosTheta > 1e-4f)
+				{
+					pathThroughput = pathThroughput * bsdf * cosTheta / pdf;
+
+					// 护栏：上限 clamp
+					if (pathThroughput.Lum() < 100.0f)
+					{
+						r.init(shadingData.x + wi * EPSILON, wi);
+						return direct + pathTrace(r, pathThroughput, depth + 1, sampler, false);
+					}
+					else
+					{
+						// discard explosive path
+						return direct;
+					}
+				}
+				else
+				{
+					return direct;
+				}
+
 				r.init(shadingData.x + (wi * EPSILON), wi);
 				return direct + pathTrace(r, pathThroughput, depth + 1, sampler, false);
 			}
@@ -472,7 +639,7 @@ public:
 						Ray ray = scene->camera.generateRay(px, py);
 
 						//RayTracing
-						//Colour sample = direct(ray, &samplers[threadId]);i
+						//Colour sample = direct(ray, &samplers[threadId]);
 						//PathTracing
 						Colour pathThroughput(1.0f, 1.0f, 1.0f);
 						Colour sample = pathTrace(ray, pathThroughput, 0, &samplers[threadId]);
@@ -525,11 +692,26 @@ public:
 					unsigned char g = (unsigned char)(clamp(final.g, 0.0f, 1.0f) * 255);
 					unsigned char b = (unsigned char)(clamp(final.b, 0.0f, 1.0f) * 255);
 
+					final.r = powf(clamp(final.r, 0.0f, 1.0f), 1.0f / 2.2f);
+					final.g = powf(clamp(final.g, 0.0f, 1.0f), 1.0f / 2.2f);
+					final.b = powf(clamp(final.b, 0.0f, 1.0f), 1.0f / 2.2f);
+
+
 					film->tonemap(x, y, r, g, b);
 					canvas->draw(x, y, r, g, b);
 				}
 			}
 			};
+
+		//LightTracing
+		//auto renderBlock = [&](int threadId, int yStart, int yEnd) {
+		//	const int samplesPerThread = 100000; 
+		//	for (int i = 0; i < samplesPerThread; ++i)
+		//	{
+		//		lightTrace(&samplers[threadId]);
+		//	}
+		//	};
+
 
 
 		int blockSize = film->height / numProcs;

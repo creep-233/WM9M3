@@ -230,7 +230,7 @@ public:
 		float rv = sampler->next();
 		float ru = sampler->next();
 
-		// === 1. Sample marginal (v - theta direction) ===
+		//Sample marginal (v - theta direction)
 		int y = 0;
 		float acc = 0.0f;
 		for (; y < env->height - 1; ++y) {
@@ -239,7 +239,7 @@ public:
 		}
 		rv = (float(y) + sampler->next()) / env->height;
 
-		// === 2. Sample conditional (u - phi direction) ===
+
 		const std::vector<float>& row = conditionalDists[y];
 		int x = 0;
 		acc = 0.0f;
@@ -249,10 +249,10 @@ public:
 		}
 		ru = (float(x) + sampler->next()) / env->width;
 
-		// === 3. Evaluate emission ===
+
 		reflectedColour = env->sample(ru, rv);
 
-		// === 4. Convert (u,v) to direction vector ===
+		// Convert (u,v) to direction vector 
 		float theta = rv * M_PI;
 		float phi = ru * 2.0f * M_PI;
 		float sinTheta = sinf(theta);
@@ -262,7 +262,7 @@ public:
 			sinTheta * sinf(phi)
 		);
 
-		// === 5. Compute PDF in solid angle ===
+		// Compute PDF in solid angle
 		float marginalPDF = marginalDist[y];
 		float conditionalPDF = conditionalDists[y][x];
 		pdf = marginalPDF * conditionalPDF * env->width * env->height / (2.0f * M_PI * M_PI * sinTheta + EPSILON);

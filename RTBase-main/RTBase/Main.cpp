@@ -18,8 +18,8 @@ int main(int argc, char *argv[])
 	// runTests()
 	
 	// Initialize default parameters
-	//std::string sceneName = "cornell-box";
-	std::string sceneName = "Scenes1/bathroom";
+	std::string sceneName = "cornell-box";
+	//std::string sceneName = "Scenes1/bathroom";
 	//std::string sceneName = "Scenes1/bathroom2";
 	//std::string sceneName = "Scenes1/bedroom";
 	//std::string sceneName = "Scenes1/classroom";
@@ -155,13 +155,18 @@ int main(int argc, char *argv[])
 		}
 
 
-		if (rt.getSPP() >= SPP)
-		{
-			rt.saveHDR(filename);
-			rt.denoiseAndSave("result_denoised.png");
-			break;
-		}
+		//if (rt.getSPP() >= SPP)
+		//{
+		//	rt.saveHDR(filename);
+		//	rt.denoiseAndSave("result_denoised.png");
+		//	break;
+		//}
 
+		//if (canvas.keyPressed('J')) 
+		//{
+		//	rt.lightTrace();
+		//	rt.savePNG("light_tracing.png");
+		//}
 
 		canvas.present();
 	}
