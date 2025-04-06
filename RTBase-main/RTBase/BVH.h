@@ -113,7 +113,7 @@ public:
     BVHNode* right = nullptr;
     std::vector<int> triangleIndices;
 
-    // 构建 BVH
+    // build BVH
     void build(std::vector<Triangle>& triangles, const std::vector<int>& triIndices, int depth = 0)
     {
         triangleIndices = triIndices;
@@ -125,13 +125,13 @@ public:
             bounds.extend(triangles[i].vertices[2].p);
         }
 
-        // 终止条件
+        // Termination condition
         if (triangleIndices.size() <= 4 || depth > 16)
         {
             return;
         }
 
-        // 计算包围盒中心并选择最长轴
+        // Calculate the bounding box center and select the longest axis
         AABB centroidBounds;
         for (int i : triangleIndices)
         {
@@ -143,13 +143,13 @@ public:
         if (extent.y > extent.x && extent.y > extent.z) axis = 1;
         else if (extent.z > extent.x) axis = 2;
 
-        // 按中心点排序
+        // Sort by center point
         std::vector<int> sorted = triangleIndices;
         std::sort(sorted.begin(), sorted.end(), [&](int a, int b) {
             return triangles[a].centre()[axis] < triangles[b].centre()[axis];
             });
 
-        // 拆分
+
         int mid = sorted.size() / 2;
         std::vector<int> leftIndices(sorted.begin(), sorted.begin() + mid);
         std::vector<int> rightIndices(sorted.begin() + mid, sorted.end());
@@ -159,11 +159,11 @@ public:
         left->build(triangles, leftIndices, depth + 1);
         right->build(triangles, rightIndices, depth + 1);
 
-        // 清空当前节点三角形列表（非叶节点）
+
         triangleIndices.clear();
     }
 
-    // 路径追踪器用：遍历找到最近交点
+
     void traverse(const Ray& ray, const std::vector<Triangle>& triangles, IntersectionData& closestHit) const
     {
         float tMin, tMax;
@@ -190,7 +190,7 @@ public:
         if (right) right->traverse(ray, triangles, closestHit);
     }
 
-    // 可见性测试（shadow ray）
+    // shadow ray
     bool traverseVisible(const Ray& ray, const std::vector<Triangle>& triangles, float maxT) const
     {
         float tMin, tMax;
