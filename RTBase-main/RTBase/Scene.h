@@ -364,3 +364,4 @@ public:
 		traceVPLPath(r, pathThroughput, sampler, depth + 1);
 	}
 };
+

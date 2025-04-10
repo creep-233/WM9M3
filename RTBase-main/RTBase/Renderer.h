@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include "Core.h"
 #include "Sampling.h"
@@ -11,6 +11,7 @@
 #include <thread>
 #include <functional>
 #include <OpenImageDenoise/oidn.hpp>
+
 
 
 class RayTracer
@@ -46,7 +47,8 @@ public:
 
 
 		film = new Film();
-		film->init((unsigned int)scene->camera.width, (unsigned int)scene->camera.height, /*new BoxFilter()*/ new GaussianFilter());
+		//film->init((unsigned int)scene->camera.width, (unsigned int)scene->camera.height, /*new BoxFilter()*/ new GaussianFilter());
+		film->init((unsigned int)scene->camera.width, (unsigned int)scene->camera.height, new GaussianFilter(1, 2));
 		SYSTEM_INFO sysInfo;
 		GetSystemInfo(&sysInfo);
 		numProcs = sysInfo.dwNumberOfProcessors;
@@ -507,12 +509,12 @@ public:
 				//pathThroughput = pathThroughput * bsdf * fabsf(Dot(wi, shadingData.sNormal)) / pdf;
 				float cosTheta = fabsf(Dot(wi, shadingData.sNormal));
 
-				// »¤À¸£ºÏÂÏŞ
+				// æŠ¤æ ï¼šä¸‹é™
 				if (pdf > 1e-4f && bsdf.Lum() > 1e-6f && cosTheta > 1e-4f)
 				{
 					pathThroughput = pathThroughput * bsdf * cosTheta / pdf;
 
-					// »¤À¸£ºÉÏÏŞ clamp
+					// æŠ¤æ ï¼šä¸Šé™ clamp
 					if (pathThroughput.Lum() < 100.0f)
 					{
 						r.init(shadingData.x + wi * EPSILON, wi);

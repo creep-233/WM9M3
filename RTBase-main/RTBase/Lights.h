@@ -1,6 +1,4 @@
-﻿
-
-#pragma once
+﻿#pragma once
 
 #include "Core.h"
 #include "Geometry.h"
@@ -77,6 +75,7 @@ public:
 		frame.fromVector(triangle->gNormal());
 		return frame.toWorld(wi);
 	}
+
 };
 
 class BackgroundColour : public Light
@@ -357,11 +356,55 @@ public:
 		pdf = 1.0f / (4 * M_PI * SQ(use<SceneBounds>().sceneRadius));
 		return p;
 	}
+	//Vec3 sampleDirectionFromLight(Sampler* sampler, float& pdf)
+	//{
+	//	// Replace this tabulated sampling of environment maps
+	//	Vec3 wi = SamplingDistributions::uniformSampleSphere(sampler->next(), sampler->next());
+	//	pdf = SamplingDistributions::uniformSpherePDF(wi);
+	//	return wi;
+	//}
+
 	Vec3 sampleDirectionFromLight(Sampler* sampler, float& pdf)
 	{
-		// Replace this tabulated sampling of environment maps
-		Vec3 wi = SamplingDistributions::uniformSampleSphere(sampler->next(), sampler->next());
-		pdf = SamplingDistributions::uniformSpherePDF(wi);
+		float rv = sampler->next();
+		float ru = sampler->next();
+
+		//Sample marginal (v - theta direction)
+		int y = 0;
+		float acc = 0.0f;
+		for (; y < env->height - 1; ++y) {
+			acc += marginalDist[y];
+			if (rv <= acc) break;
+		}
+		rv = (float(y) + sampler->next()) / env->height;
+
+		//Sample conditional (u - phi direction)
+		const std::vector<float>& row = conditionalDists[y];
+		int x = 0;
+		acc = 0.0f;
+		for (; x < env->width - 1; ++x) {
+			acc += row[x];
+			if (ru <= acc) break;
+		}
+		ru = (float(x) + sampler->next()) / env->width;
+
+		// Convert to spherical direction
+		float theta = rv * M_PI;
+		float phi = ru * 2.0f * M_PI;
+		float sinTheta = sinf(theta);
+		Vec3 wi = Vec3(
+			sinTheta * cosf(phi),
+			cosf(theta),
+			sinTheta * sinf(phi)
+		);
+
+		// Compute PDF in solid angle
+		float marginalPDF = marginalDist[y];
+		float conditionalPDF = conditionalDists[y][x];
+		pdf = marginalPDF * conditionalPDF * env->width * env->height / (2.0f * M_PI * M_PI * sinTheta + EPSILON);
+
 		return wi;
 	}
+
+
 };

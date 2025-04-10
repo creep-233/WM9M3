@@ -90,42 +90,42 @@ public:
 	bool rayIntersect(const Ray& r, float& t, float& u, float& v) const
 	{
 		
-		//float denom = Dot(n, r.dir);
-		//if (denom == 0) { return false; }
-		//t = (d - Dot(n, r.o)) / denom;
-		//if (t < 0) { return false; }
-		//Vec3 p = r.at(t);
-		//float invArea = 1.0f / Dot(e1.cross(e2), n);
-		//u = Dot(e1.cross(p - vertices[1].p), n) * invArea;
-		//if (u < 0 || u > 1.0f) { return false; }
-		//v = Dot(e2.cross(p - vertices[2].p), n) * invArea;
-		//if (v < 0 || (u + v) > 1.0f) { return false; }
-		//return true;
+		float denom = Dot(n, r.dir);
+		if (denom == 0) { return false; }
+		t = (d - Dot(n, r.o)) / denom;
+		if (t < 0) { return false; }
+		Vec3 p = r.at(t);
+		float invArea = 1.0f / Dot(e1.cross(e2), n);
+		u = Dot(e1.cross(p - vertices[1].p), n) * invArea;
+		if (u < 0 || u > 1.0f) { return false; }
+		v = Dot(e2.cross(p - vertices[2].p), n) * invArea;
+		if (v < 0 || (u + v) > 1.0f) { return false; }
+		return true;
 
-		const Vec3& p0 = vertices[0].p;
-		const Vec3& p1 = vertices[1].p;
-		const Vec3& p2 = vertices[2].p;
+		//const Vec3& p0 = vertices[0].p;
+		//const Vec3& p1 = vertices[1].p;
+		//const Vec3& p2 = vertices[2].p;
 
-		Vec3 edge1 = p1 - p0;
-		Vec3 edge2 = p2 - p0;
-		Vec3 h = r.dir.cross(edge2); 
-		float a = Dot(edge1, h);
-		if (fabs(a) < EPSILON) return false;
+		//Vec3 edge1 = p1 - p0;
+		//Vec3 edge2 = p2 - p0;
+		//Vec3 h = r.dir.cross(edge2); 
+		//float a = Dot(edge1, h);
+		//if (fabs(a) < EPSILON) return false;
 
-		float f = 1.0f / a;
-		Vec3 s = r.o - p0;
-		u = f * Dot(s, h);
-		if (u < 0.0f || u > 1.0f) return false;
+		//float f = 1.0f / a;
+		//Vec3 s = r.o - p0;
+		//u = f * Dot(s, h);
+		//if (u < 0.0f || u > 1.0f) return false;
 
-		Vec3 q = s.cross(edge1);
-		v = f * Dot(r.dir, q);
-		if (v < 0.0f || u + v > 1.0f) return false;
+		//Vec3 q = s.cross(edge1);
+		//v = f * Dot(r.dir, q);
+		//if (v < 0.0f || u + v > 1.0f) return false;
 
-		t = f * Dot(edge2, q);
-		if (t > EPSILON)
-			return true;
+		//t = f * Dot(edge2, q);
+		//if (t > EPSILON)
+		//	return true;
 
-		return false;
+		//return false;
 
 	}
 	void interpolateAttributes(const float alpha, const float beta, const float gamma, Vec3& interpolatedNormal, float& interpolatedU, float& interpolatedV) const
